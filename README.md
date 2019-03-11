@@ -354,4 +354,6 @@ ALMemoryProxy:::getData를 50 ms마다 호출하고, 값을 매트릭스에 저�
 
 Event에 반응하기를 Naoqi 시작할 때 자동으로 동작하게 할 수 있다. 
 
-로봇에 스크립트를 업로드하고, /home/nao/reacting_to_events.py
+로봇에 스크립트를 업로드하고 (/home/nao/reacting_to_events.py) /home/nao/naoqi/preferences/autoload.ini 파일을 수정하여 다음을 수행할 수 있다.
+
+참고 : pip 와 pport는 스크립트가 실행되는 동안 NAOqi에서 자동으로 실행한다. 
