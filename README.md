@@ -357,3 +357,89 @@ Event에 반응하기를 Naoqi 시작할 때 자동으로 동작하게 할 수 �
 로봇에 스크립트를 업로드하고 (/home/nao/reacting_to_events.py) /home/nao/naoqi/preferences/autoload.ini 파일을 수정하여 다음을 수행할 수 있다.
 
 참고 : pip 와 pport는 스크립트가 실행되는 동안 NAOqi에서 자동으로 실행한다. 
+
+## 파이썬 SDK 예제
+## core
+### non-ASCII 텍스트 읽기
+로봇이 프랑스어로 말하도록 설정하고 데이터 파일에서 몇 가지 문장을 말하게 한다고 가정하자.
+인코딩 처리를 해야하기 때문에 조금 까다롭다.
+
+### 예시 
+먼저, 다음 파일을 다운로드하여 로봇내에 같은 디렉토리에 넣는다:
+
+- coffee_en.txt
+- coffee_fr_utf-8.txt
+- coffee_fr_latin9.txt
+- non_ascii.py
+
+coffee_en.txt는 “I like coffee”이란 스트링 문자를 포함하고, coffee_fr_utf-8.txt와 coffee_fr_latin9.txt는 J’aime le café를 인코딩한 문자를 포함한다.
+
+코드를 살펴보자
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Non ascii Characters"""
+
+import qi
+import argparse
+import sys
+import codecs
+
+
+def say_from_file(tts_service, filename, encoding):
+    with codecs.open(filename, encoding=encoding) as fp:
+        contents = fp.read()
+        # warning: print contents won't work
+        to_say = contents.encode("utf-8")
+    tts_service.say(to_say)
+
+
+def main(session):
+    """
+    This example uses non ascii characters.
+    """
+    # Get the service ALTextToSpeech.
+
+    tts_service = session.service("ALTextToSpeech")
+
+    try :
+        tts_service.setLanguage('French')
+    except RuntimeError:
+        print "No French pronunciation because French language is not installed. Pronunciation will be incorrect."
+    say_from_file(tts_service, 'coffee_fr_utf-8.txt', 'utf-8')
+    say_from_file(tts_service, 'coffee_fr_latin9.txt', 'latin9')
+
+    tts_service.setLanguage('English')
+    # the string "I like coffee" is encoded the exact same way in these three
+    # encodings
+    say_from_file(tts_service, 'coffee_en.txt', 'ascii')
+    say_from_file(tts_service, 'coffee_en.txt', 'utf-8')
+    say_from_file(tts_service, 'coffee_en.txt', 'latin9')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+첫째, 우리가 코덱을 어떻게 사용하지 않는지 확인해라. 열어서 인코딩을 특정한다.
+
+또한 파일에서 판독한 결과를 어떻게 디코딩 하는지 주의해라. fp.read에 의해 반환된 객체는 유니코드 객체인데, 우리는 그것을 다시 인코딩해서  i’UTF-8’로 인코딩된 str 객체를 TTS 프록시가 사용할 수 있도록 만들어야한다.
+
+파이썬은 'ASCII'(로봇의 현재 로컬)을 사용하여 문자열을 디코딩하려고 시도하므로 Print를 실행하면 작동하지 않는다.
