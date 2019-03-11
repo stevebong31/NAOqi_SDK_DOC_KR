@@ -349,3 +349,9 @@ if __name__ == "__main__":
 
 
 ALMemoryProxy:::getData를 50 ms마다 호출하고, 값을 매트릭스에 저장하고 작성하면 된다.
+
+## 파이썬 코드 로봇에서 실행하기
+
+Event에 반응하기를 Naoqi 시작할 때 자동으로 동작하게 할 수 있다. 
+
+로봇에 스크립트를 업로드하고, /home/nao/reacting_to_events.py
