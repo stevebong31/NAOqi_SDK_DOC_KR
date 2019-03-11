@@ -440,6 +440,169 @@ if __name__ == "__main__":
 
 첫째, 우리가 코덱을 어떻게 사용하지 않는지 확인해라. 열어서 인코딩을 특정한다.
 
-또한 파일에서 판독한 결과를 어떻게 디코딩 하는지 주의해라. fp.read에 의해 반환된 객체는 유니코드 객체인데, 우리는 그것을 다시 인코딩해서  i’UTF-8’로 인코딩된 str 객체를 TTS 프록시가 사용할 수 있도록 만들어야한다.
+또한 파일에서 판독한 결과를 어떻게 디코딩 하는지 주의해라. fp.read에 의해 반환된 객체는 유니코드 객체인데, 우리는 그것을 다시 인코딩해서 ’UTF-8’로 인코딩된 str 객체를 TTS 프록시가 사용할 수 있도록 만들어야한다.
 
-파이썬은 'ASCII'(로봇의 현재 로컬)을 사용하여 문자열을 디코딩하려고 시도하므로 Print를 실행하면 작동하지 않는다.
+파이썬은 'ASCII'(로봇의 현재 로컬)을 사용하여 문자열을 디코딩하려고 시도하므로 Print를 실행하면 작동하지 않는다:
+
+~~~
+Traceback (most recent call last):
+  File "non_ascii.py", line 22, in <module>
+    main()
+  File "non_ascii.py", line 18, in main
+    say_from_file(filename)
+  File "non_ascii", line 10, in say_from_file
+    print contents
+UnicodeEncodeError: 'ascii' codec can't encode character u'\xe9' in position
+13: ordinal not in range(128)
+~~~
+
+마지막 파일의 인코딩에 관계없이 TTS 프록시로 전송되기 전에 ’UTF-8’로 인코딩된다.
+
+
+### 예시 돌려보기
+
+로봇의 SSH를 열어 다음을 실행한다.
+
+~~~
+$ python non_ascii.py
+~~~
+
+### 더 나아가기 
+
+파일이 UTF-8로 인코딩됬는지 확인 되지 않으면 다음과 같은 방법으로 확인할 수 있다.
+~~~
+with codecs.open(filename, encoding="utf-8") as fp:
+    try:
+        contents = fp.read()
+    except UnicodeDecodeError:
+        print filename, "is not UTF-8 encoded"
+        return
+~~~
+## Motion
+
+## 자세
+
+이 섹션은 NAO가 Pose lnit 및 Pose Zero 를 취하도록 만드는 방법을 보여준다.
+
+### Pose Init
+
+NAO를 초기 자세로 만든다. 
+
+almotion_poseInit.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: PoseInit - Small example to make Nao go to an initial position."""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    PoseInit: Small example to make Nao go to an initial position.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### Pose Zero
+
+모든 NAO의 모터를 0으로 만든다.
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: PoseZero: Set all the motors of the body to zero."""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    Use the goToPosture Method to PoseZero.
+    Set all the motors of the body to zero.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Zero
+    posture_service.goToPosture("StandZero", 0.5)
+
+    # We use the "Body" name to signify the collection of all joints and actuators
+    #pNames = "Body"
+
+    # Get the Number of Joints
+    #numBodies = len(motion_service.getBodyNames(pNames))
+
+    # We prepare a collection of floats
+    #pTargetAngles = [0.0] * numBodies
+
+    # We set the fraction of max speed
+    #pMaxSpeedFraction = 0.3
+
+    # Ask motion to do this with a blocking call
+    #motion_service.angleInterpolationWithSpeed(pNames, pTargetAngles, pMaxSpeedFraction)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+    
+~~~
