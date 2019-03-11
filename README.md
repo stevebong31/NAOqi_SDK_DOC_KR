@@ -137,3 +137,215 @@ motion.moveInit()
 id = motion.post.moveTo(0.5, 0, 0)
 motion.wait(id, 0)
 ~~~
+
+
+## Event에 반응하기.
+
+우리는 로봇이 사람 얼굴을 감지했을 때마다 'Hello, you'라고 말하게 하고 싶다.
+
+이것을 하기 위해서, 우리는 ALFacedetection모듈이 만드는 ‘FaceDetected’ Event를 요청받아 Callback에 링크해야 한다. Callback은 Event가 발생할 때마다 실행되는 기능이다.
+
+예시는 아래에 있다 : 스크립트를 실랭하고 로봇앞에 얼굴을 내밀어라. 너는 'hello, you' 라는 말을 들을 수 있다.
+
+reacting_to_events.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: A Simple class to get & read FaceDetected Events"""
+
+import qi
+import time
+import sys
+import argparse
+
+
+class HumanGreeter(object):
+    """
+    A simple class to react to face detection events.
+    """
+
+    def __init__(self, app):
+        """
+        Initialisation of qi framework and event detection.
+        """
+        super(HumanGreeter, self).__init__()
+        app.start()
+        session = app.session
+        # Get the service ALMemory.
+        self.memory = session.service("ALMemory")
+        # Connect the event callback.
+        self.subscriber = self.memory.subscriber("FaceDetected")
+        self.subscriber.signal.connect(self.on_human_tracked)
+        # Get the services ALTextToSpeech and ALFaceDetection.
+        self.tts = session.service("ALTextToSpeech")
+        self.face_detection = session.service("ALFaceDetection")
+        self.face_detection.subscribe("HumanGreeter")
+        self.got_face = False
+
+    def on_human_tracked(self, value):
+        """
+        Callback for event FaceDetected.
+        """
+        if value == []:  # empty value when the face disappears
+            self.got_face = False
+        elif not self.got_face:  # only speak the first time a face appears
+            self.got_face = True
+            print "I saw a face!"
+            self.tts.say("Hello, you!")
+            # First Field = TimeStamp.
+            timeStamp = value[0]
+            print "TimeStamp is: " + str(timeStamp)
+
+            # Second Field = array of face_Info's.
+            faceInfoArray = value[1]
+            for j in range( len(faceInfoArray)-1 ):
+                faceInfo = faceInfoArray[j]
+
+                # First Field = Shape info.
+                faceShapeInfo = faceInfo[0]
+
+                # Second Field = Extra info (empty for now).
+                faceExtraInfo = faceInfo[1]
+
+                print "Face Infos :  alpha %.3f - beta %.3f" % (faceShapeInfo[1], faceShapeInfo[2])
+                print "Face Infos :  width %.3f - height %.3f" % (faceShapeInfo[3], faceShapeInfo[4])
+                print "Face Extra Infos :" + str(faceExtraInfo)
+
+    def run(self):
+        """
+        Loop on, wait for events until manual interruption.
+        """
+        print "Starting HumanGreeter"
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print "Interrupted by user, stopping HumanGreeter"
+            self.face_detection.unsubscribe("HumanGreeter")
+            #stop
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["HumanGreeter", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+
+    human_greeter = HumanGreeter(app)
+    human_greeter.run()
+
+~~~
+
+참고 : 어떤 식으로든 요청한 변수를 메모리에 저장해야한다. 그렇지 않으면 요청한 변수는 사라지고 연결은 끊어진다. 여기서는 그것을 Class 변수로만 유지한다.
+
+
+## 데이터 기록 : 머리 각도.
+
+로봇의 다양한 센서 값을 기록하는 것은 쉽다.
+
+간단한 예시는 다음과 같다:
+
+data_recording.py
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Record some sensors values and write them into a file."""
+
+import qi
+import argparse
+import sys
+import os
+import time
+
+
+# MEMORY_VALUE_NAMES is the list of ALMemory values names you want to save.
+ALMEMORY_KEY_NAMES = ["Device/SubDeviceList/HeadYaw/Position/Sensor/Value",
+                      "Device/SubDeviceList/HeadYaw/Position/Actuator/Value"]
+
+def recordData(memory_service):
+    """ Record the data from ALMemory.
+    Returns a matrix of values
+
+    """
+    print "Recording data ..."
+    data = list()
+    for range_counter in range (1, 100):
+        line = list()
+        for key in ALMEMORY_KEY_NAMES:
+            value = memory_service.getData(key)
+            line.append(value)
+        data.append(line)
+        time.sleep(0.05)
+    return data
+
+def main(session):
+    """ Parse command line arguments, run recordData
+    and write the results into a csv file.
+    """
+    # Get the services ALMemory and ALMotion.
+
+    memory_service = session.service("ALMemory")
+    motion_service = session.service("ALMotion")
+
+    # Set stiffness on for Head motors
+    motion_service.setStiffnesses("Head", 1.0)
+    # Will go to 1.0 then 0 radian  in two seconds
+    motion_service.angleInterpolation(
+        ["HeadYaw"],
+        [1.0, 0.0],
+        [1  , 2],
+        False,
+        _async=True
+    )
+    data = recordData(memory_service)
+    # Gently set stiff off for Head motors
+    motion_service.setStiffnesses("Head", 0.0)
+
+    output = os.path.abspath("record.csv")
+
+    with open(output, "w") as fp:
+        for line in data:
+            fp.write("; ".join(str(x) for x in line))
+            fp.write("\n")
+
+    print "Results written to", output
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+
+~~~
+
+
+ALMemoryProxy:::getData를 50 ms마다 호출하고, 값을 매트릭스에 저장하고 작성하면 된다.
