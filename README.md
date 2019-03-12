@@ -90,7 +90,7 @@ pings = almemory.ping()
 
 ### NAO를 얼리게 설정하기
 
-관절의 뻣뻣함을 0이 아닌 다른 값으로 설정하면, 로봇이 움직이지 않는다. (1~0)
+관절의 강성을 0이 아닌 다른 값으로 설정하면, 로봇이 움직이지 않는다. (1~0)
 
 이것을 실행해보시오. 간단하게  ALMotionProxy::setStiffnesses Method를 호출하면 된다.
 
@@ -542,6 +542,7 @@ if __name__ == "__main__":
 
 모든 NAO의 모터를 0으로 만든다.
 
+almotion_poseZero.py
 ~~~
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
@@ -606,3 +607,895 @@ if __name__ == "__main__":
     main(session)
     
 ~~~
+
+## 강성
+강성을 켜거나 끌 수 있다.
+
+### 강셩 켜기
+
+almotion_stiffnessOn.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Stiffness On - Active Stiffness of All Joints and Actuators"""
+
+import qi
+import argparse
+import sys
+import time
+
+
+def main(session):
+    """
+    Stiffness On - Active Stiffness of All Joints and Actuators.
+    This example is only compatible with NAO.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+
+    # We use the "Body" name to signify the collection of all joints
+    names = "Body"
+    stiffnessLists = 1.0
+    timeLists = 1.0
+    motion_service.stiffnessInterpolation(names, stiffnessLists, timeLists)
+
+    # print motion state
+    print motion_service.getSummary()
+
+    time.sleep(2.0)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### 강성 끄기
+
+경고 : 이것을 시도하기 전에 로봇이 서있지 않은지 확인하십시오.
+
+almotion_stiffnessOff.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example : Stiffness Off - remove stiffness of all joints and actuators"""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    Stiffness Off - remove stiffness of all joints and actuators.
+    This example is only compatible with NAO.
+    """
+    # Get the service ALMotion.
+
+    motion_service = session.service("ALMotion")
+
+    # We use the "Body" name to signify the collection of all joints
+    names = "Body"
+    stiffnessLists = 0.0
+    timeLists = 1.0
+    motion_service.stiffnessInterpolation(names, stiffnessLists, timeLists)
+
+    # print motion state
+    print motion_service.getSummary()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+
+## 움직이고 걷기
+
+이 섹션에는 표준 보행과 맟춤 보행, 모두에 대한 몇가지 파이썬 예제가 담겨있다.
+
+### 간단히 걷기
+
+이 예제는 알데바란에서 만든 기준 보행을 어떻게 하는지 보여준다.
+
+#### 걷기
+NAO를 뒤 앞 그리고 회전하여 걷게 한다.
+
+almotion_move.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Walk - Small example to make Nao walk"""
+
+import qi
+import argparse
+import sys
+import motion
+import time
+import almath
+
+
+def userArmsCartesian(motion_service):
+    effector   = ["LArm", "RArm"]
+    frame      = motion.FRAME_TORSO
+    useSensorValues = False
+
+    # just control position
+    axisMask   = [motion.AXIS_MASK_VEL, motion.AXIS_MASK_VEL]
+
+    # LArm path
+    pathLArm = []
+    initTf   = almath.Transform(motion_service.getTransform("LArm", frame, useSensorValues))
+    targetTf = almath.Transform(motion_service.getTransform("LArm", frame, useSensorValues))
+    targetTf.r1_c4 += 0.04 # x
+    targetTf.r2_c4 -= 0.10 # y
+    targetTf.r3_c4 += 0.10 # z
+    pathLArm.append(list(targetTf.toVector()))
+    pathLArm.append(list(initTf.toVector()))
+    pathLArm.append(list(targetTf.toVector()))
+    pathLArm.append(list(initTf.toVector()))
+
+    # RArm path
+    pathRArm = []
+    initTf   = almath.Transform(motion_service.getTransform("RArm", frame, useSensorValues))
+    targetTf = almath.Transform(motion_service.getTransform("RArm", frame, useSensorValues))
+    targetTf.r1_c4 += 0.04 # x
+    targetTf.r2_c4 += 0.10 # y
+    targetTf.r3_c4 += 0.10 # z
+    pathRArm.append(list(targetTf.toVector()))
+    pathRArm.append(list(initTf.toVector()))
+    pathRArm.append(list(targetTf.toVector()))
+    pathRArm.append(list(initTf.toVector()))
+
+    pathList = []
+    pathList.append(pathLArm)
+    pathList.append(pathRArm)
+
+    # Go to the target and back again
+    timesList = [[1.0, 2.0, 3.0, 4.0],
+                 [1.0, 2.0, 3.0, 4.0]] # seconds
+
+    motion_service.transformInterpolations(effector, frame, pathList,
+                                       axisMask, timesList)
+
+
+def userArmArticular(motion_service):
+    # Arms motion from user have always the priority than walk arms motion
+    JointNames = ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll"]
+    Arm1 = [-40,  25, 0, -40]
+    Arm1 = [ x * motion.TO_RAD for x in Arm1]
+
+    Arm2 = [-40,  50, 0, -80]
+    Arm2 = [ x * motion.TO_RAD for x in Arm2]
+
+    pFractionMaxSpeed = 0.6
+
+    motion_service.angleInterpolationWithSpeed(JointNames, Arm1, pFractionMaxSpeed)
+    motion_service.angleInterpolationWithSpeed(JointNames, Arm2, pFractionMaxSpeed)
+    motion_service.angleInterpolationWithSpeed(JointNames, Arm1, pFractionMaxSpeed)
+
+
+def main(session):
+    """
+    Walk - Small example to make Nao walk
+    This example is only compatible with NAO
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand
+    posture_service.goToPosture("StandInit", 0.5)
+
+    #####################
+    ## Enable arms control by Motion algorithm
+    #####################
+    motion_service.setMoveArmsEnabled(True, True)
+    # motion_service.setMoveArmsEnabled(False, False)
+
+    #####################
+    ## FOOT CONTACT PROTECTION
+    #####################
+    #motion_service.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", False]])
+    motion_service.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True]])
+
+    #TARGET VELOCITY
+    X = -0.5  # backward
+    Y = 0.0
+    Theta = 0.0
+    Frequency =0.0 # low speed
+    try:
+        motion_service.moveToward(X, Y, Theta, [["Frequency", Frequency]])
+    except Exception, errorMsg:
+        print str(errorMsg)
+        print "This example is not allowed on this robot."
+        exit()
+
+    userArmsCartesian(motion_service)
+
+    #TARGET VELOCITY
+    X = 0.8
+    Y = 0.0
+    Theta = 0.0
+    Frequency =1.0 # max speed
+    try:
+        motion_service.moveToward(X, Y, Theta, [["Frequency", Frequency]])
+    except Exception, errorMsg:
+        print str(errorMsg)
+        print "This example is not allowed on this robot."
+        exit()
+
+    time.sleep(4.0)
+
+    #TARGET VELOCITY
+    X = 0.2
+    Y = -0.5
+    Theta = 0.2
+    Frequency = 1.0
+
+    try:
+        motion_service.moveToward(X, Y, Theta, [["Frequency", Frequency]])
+    except Exception, errorMsg:
+        print str(errorMsg)
+        print "This example is not allowed on this robot."
+        exit()
+
+    time.sleep(2.0)
+    userArmArticular(motion_service)
+    time.sleep(2.0)
+
+    #####################
+    ## End Walk
+    #####################
+    #TARGET VELOCITY
+    X = 0.0
+    Y = 0.0
+    Theta = 0.0
+    motion_service.moveToward(X, Y, Theta)
+
+    motion_service.waitUntilMoveIsFinished()
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### 이동하기
+
+NAO를 목표로 걷게한다.
+
+almotion_moveTo.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Move To - Small example to make Nao Move To an Objective"""
+
+import qi
+import argparse
+import sys
+import math
+import almath
+
+
+def main(session):
+    """
+    Move To: Small example to make Nao Move To an Objective.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    #####################
+    ## Enable arms control by move algorithm
+    #####################
+    motion_service.setMoveArmsEnabled(True, True)
+    #~ motion_service.setMoveArmsEnabled(False, False)
+
+    #####################
+    ## FOOT CONTACT PROTECTION
+    #####################
+    #~ motion_service.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION",False]])
+    motion_service.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True]])
+
+    #####################
+    ## get robot position before move
+    #####################
+    initRobotPosition = almath.Pose2D(motion_service.getRobotPosition(False))
+
+    X = 0.3
+    Y = 0.1
+    Theta = math.pi/2.0
+    motion_service.moveTo(X, Y, Theta, _async=True)
+    # wait is useful because with _async moveTo is not blocking function
+    motion_service.waitUntilMoveIsFinished()
+
+    #####################
+    ## get robot position after move
+    #####################
+    endRobotPosition = almath.Pose2D(motion_service.getRobotPosition(False))
+
+    #####################
+    ## compute and print the robot motion
+    #####################
+    robotMove = almath.pose2DInverse(initRobotPosition)*endRobotPosition
+    # return an angle between ]-PI, PI]
+    robotMove.theta = almath.modulo2PI(robotMove.theta)
+    print "Robot Move:", robotMove
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+## Customized walk
+## Footstep control
+
+## 좌표 명령어
+
+이 섹션에서는 NAO의 몸을 좌표 이동하는 예시를 보여준다.
+
+### 팔
+팔 궤적의 예시이다.
+
+#### Trajectory 1
+almotion_cartesianArm1.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Arm"""
+
+import qi
+import argparse
+import sys
+import motion
+import almath
+
+
+def main(session):
+    """
+    Use case of transformInterpolations API.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    effector   = "LArm"
+    frame      = motion.FRAME_TORSO
+    axisMask   = almath.AXIS_MASK_VEL # just control position
+    useSensorValues = False
+
+    path = []
+    currentTf = motion_service.getTransform(effector, frame, useSensorValues)
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r1_c4 += 0.03 # x
+    targetTf.r2_c4 += 0.03 # y
+
+    path.append(list(targetTf.toVector()))
+    path.append(currentTf)
+
+    # Go to the target and back again
+    times      = [2.0, 4.0] # seconds
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+~~~
+
+#### Trajectory 2
+almotion_cartesianArm2.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Arm"""
+
+import qi
+import argparse
+import sys
+import motion
+import almath
+
+
+def main(session):
+    """
+    Use transformInterpolations Method on Arm
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    effector   = "LArm"
+    frame      = motion.FRAME_TORSO
+    axisMask   = almath.AXIS_MASK_VEL    # just control position
+    useSensorValues = False
+
+    path = []
+    currentTf = motion_service.getTransform(effector, frame, useSensorValues)
+    # point 1
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 -= 0.05 # y
+    path.append(list(targetTf.toVector()))
+
+    # point 2
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r3_c4 += 0.04 # z
+    path.append(list(targetTf.toVector()))
+
+    # point 3
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 += 0.04 # y
+    path.append(list(targetTf.toVector()))
+
+    # point 4
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r3_c4 -= 0.02 # z
+    path.append(list(targetTf.toVector()))
+
+    # point 5
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 -= 0.05 # y
+    path.append(list(targetTf.toVector()))
+
+    # point 6
+    path.append(currentTf)
+
+    times = [0.5, 1.0, 2.0, 3.0, 4.0, 4.5] # seconds
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+### 발
+
+NAO의 왼쪽 발을 움직인다.
+almotion_cartesianFoot.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Arm on Foot"""
+
+import qi
+import argparse
+import sys
+import almath
+import motion
+
+
+def main(session):
+    """
+    Use transformInterpolations Method on Foot.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    frame      = motion.FRAME_WORLD
+    axisMask   = almath.AXIS_MASK_ALL   # full control
+    useSensorValues = False
+
+    # Lower the Torso and move to the side
+    effector = "Torso"
+    initTf   = almath.Transform(
+        motion_service.getTransform(effector, frame, useSensorValues))
+    deltaTf  = almath.Transform(0.0, -0.06, -0.03) # x, y, z
+    targetTf = initTf*deltaTf
+    path     = list(targetTf.toVector())
+    times    = 2.0 # seconds
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # LLeg motion
+    effector = "LLeg"
+    initTf = almath.Transform()
+
+    try:
+        initTf = almath.Transform(motion_service.getTransform(effector, frame, useSensorValues))
+    except Exception, errorMsg:
+        print str(errorMsg)
+        print "This example is not allowed on this robot."
+        exit()
+
+    # rotation Z
+    deltaTf  = almath.Transform(0.0, 0.04, 0.0)*almath.Transform().fromRotZ(45.0*almath.TO_RAD)
+    targetTf = initTf*deltaTf
+    path     = list(targetTf.toVector())
+    times    = 2.0 # seconds
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### 몸통
+
+NAO의 몸통을 다른자세로 바꾼다.
+
+#### Trajectory
+
+~~~
+almotion_cartesianTorso.py
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Torso"""
+
+import qi
+import argparse
+import sys
+import almath
+import motion
+
+
+def main(session):
+    """
+    Use transformInterpolations Method on Torso.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    effector   = "Torso"
+    frame      =  motion.FRAME_WORLD
+    axisMask   = almath.AXIS_MASK_ALL # full control
+    useSensorValues = False
+
+    # Define the changes relative to the current position
+    dx         = 0.045 # translation axis X (meter)
+    dy         = 0.050 # translation axis Y (meter)
+
+    path = []
+    currentTf = motion_service.getTransform(effector, frame, useSensorValues)
+
+    # point 1
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r1_c4 += dx
+    path.append(list(targetTf.toVector()))
+
+    # point 2
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 -= dy
+    path.append(list(targetTf.toVector()))
+
+    # point 3
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r1_c4 -= dx
+    path.append(list(targetTf.toVector()))
+
+    # point 4
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 += dy
+    path.append(list(targetTf.toVector()))
+
+    # point 5
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r1_c4 += dx
+    path.append(list(targetTf.toVector()))
+
+    # point 6
+    path.append(currentTf)
+
+    times = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0] # seconds
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+
+### Hula Hoop
+almotion_hulaHoop.py
+
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method to play short animation"""
+
+import qi
+import argparse
+import sys
+import almath
+import motion
+
+
+def main(session):
+    """
+    Use transformInterpolations Method to play short animation.
+    This example will only work on Nao.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # end initialize proxy, begin go to Stand Init
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    # end go to Stand Init, begin define control point
+    effector        = "Torso"
+    frame           =  motion.FRAME_ROBOT
+    axisMask        = almath.AXIS_MASK_ALL
+    useSensorValues = False
+
+    currentTf = almath.Transform(motion_service.getTransform(effector, frame, useSensorValues))
+
+    # end define control point, begin define target
+
+    # Define the changes relative to the current position
+    dx         = 0.03                    # translation axis X (meter)
+    dy         = 0.03                    # translation axis Y (meter)
+    dwx        = 8.0*almath.TO_RAD       # rotation axis X (rad)
+    dwy        = 8.0*almath.TO_RAD       # rotation axis Y (rad)
+
+    # point 01 : forward  / bend backward
+    target1Tf = almath.Transform(currentTf.r1_c4, currentTf.r2_c4, currentTf.r3_c4)
+    target1Tf *= almath.Transform(dx, 0.0, 0.0)
+    target1Tf *= almath.Transform().fromRotY(-dwy)
+
+    # point 02 : right    / bend left
+    target2Tf = almath.Transform(currentTf.r1_c4, currentTf.r2_c4, currentTf.r3_c4)
+    target2Tf *= almath.Transform(0.0, -dy, 0.0)
+    target2Tf *= almath.Transform().fromRotX(-dwx)
+
+    # point 03 : backward / bend forward
+    target3Tf = almath.Transform(currentTf.r1_c4, currentTf.r2_c4, currentTf.r3_c4)
+    target3Tf *= almath.Transform(-dx, 0.0, 0.0)
+    target3Tf *= almath.Transform().fromRotY(dwy)
+
+    # point 04 : left     / bend right
+    target4Tf = almath.Transform(currentTf.r1_c4, currentTf.r2_c4, currentTf.r3_c4)
+    target4Tf *= almath.Transform(0.0, dy, 0.0)
+    target4Tf *= almath.Transform().fromRotX(dwx)
+
+    path = []
+    path.append(list(target1Tf.toVector()))
+    path.append(list(target2Tf.toVector()))
+    path.append(list(target3Tf.toVector()))
+    path.append(list(target4Tf.toVector()))
+
+    path.append(list(target1Tf.toVector()))
+    path.append(list(target2Tf.toVector()))
+    path.append(list(target3Tf.toVector()))
+    path.append(list(target4Tf.toVector()))
+
+    path.append(list(target1Tf.toVector()))
+    path.append(list(currentTf.toVector()))
+
+    timeOneMove  = 0.5 #seconds
+    times = []
+    for i in range(len(path)):
+        times.append((i+1)*timeOneMove)
+
+    # end define target, begin call motion api
+
+    # call the cartesian control API
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
