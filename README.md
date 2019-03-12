@@ -1937,4 +1937,1294 @@ if __name__ == "__main__":
 이 섹션은 libalmath Python wrapping을 어떻게 사용하는지 보여준다. Wrapping은 이 라이브러리에 포함된 모든 기능을 사용할 수 있게 해주며, 이는 동작과 관련된 연산(예:이펙터 위치)에 유용하다.
 
 ### Python wrapping
-libalmath는 파이썬으로 Wrapping 되어 있다. 예를 들어 Choregraphe 또는 Python 스크립트에서 이 라이브러리를 사용할 수 있게 한다.
+libalmath는 파이썬으로 Wrapping 되어 있다. 예를 들어 Choregraphe 또는 Python 스크립트에서 이 라이브러리를 사용할 수 있게 한다. Almath를 import 하려면 다음 줄을 실행하십시오.(Choregraphe 외부에서 코딩하려면 Python SDK - Installation Guide를 통해 SDK를 올바르게 설정하십시오)
+~~~
+import almath
+~~~
+다음 방법으로 libalmath의 method를 모두 불러올 수 있다.
+~~~
+almath.methodName(arg0, arg1, ...)
+~~~
+
+libalmath는 까다로운 형태를 사용하기 때문에, 정확하게 사용하려면 유의해야한다. 이는 올바른 형식을 직접적으로 제공하지 않는 ALMotion과 같은 다른 모듈과 연계시 어려울 수 있다.
+
+### ALMath와 ALMotion 함께 사용하기
+
+예시로 ALMotionProxy::getTransform Method를 사용하여 ALMotion에서 transform을 찾는 방법과 ALMath로 계산한 transform을 ALMotionProxy::setTransform을 사용하여 다시 ALMotion으로 전송하는 방법을 보여준다. (transform을 사용하는 다른 Method에서도 원리는 동일)
+
+
+almath_transform.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Show how to use almath with python and send the results to
+    the robot by using a proxy to ALMotion"""
+
+import qi
+import argparse
+import sys
+import time
+import almath
+
+
+def main(session):
+    """
+    Show how to use almath with python and send the results to
+    the robot by using a proxy to ALMotion.
+    """
+    # Get the services AlMotion and ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # WakeUp
+    motion_service.wakeUp()
+
+    # Stand up.
+    posture_service.goToPosture("StandInit", 0.3)
+
+    chainName = "RArm"
+    frame = 1 # FRAME_WORLD
+    useSensors = True
+
+    ##############################################
+    # Retrieve a transform matrix using ALMotion #
+    ##############################################
+
+    # Retrieve current transform from ALMotion.
+    # Convert it to a transform matrix for ALMath.
+    origTransform = almath.Transform(
+        motion_service.getTransform(chainName, frame, useSensors))
+
+    # Visualize the transform using overriden print from ALMath
+    print "Original transform"
+    print origTransform
+
+    ##########################################################
+    # Use almath to do some computations on transform matrix #
+    ##########################################################
+
+    # Compute a transform corresponding to the desired move
+    # (here, move the chain for 5cm along the Z axis and the X axis).
+    moveTransform = almath.Transform.fromPosition(0.05, 0.0, 0.05)
+
+    # Compute the corresponding target transform.
+    targetTransform = moveTransform * origTransform
+
+    # Visualize it.
+    print "Target transform"
+    print targetTransform
+
+    ##############################################
+    # Send a transform to the robot via ALMotion #
+    ##############################################
+
+    # Convert it to a tuple.
+    targetTransformList = list(targetTransform.toVector())
+
+    # Send the target transform to NAO through ALMotion.
+    fractionOfMaxSpeed = 0.5
+    axisMask = almath.AXIS_MASK_VEL # Translation X, Y, Z
+    motion_service.setTransforms(
+        chainName,
+        frame,
+        targetTransformList,
+        fractionOfMaxSpeed,
+        axisMask)
+
+    time.sleep(2.0)
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### Using ALMath to generate footsteps
+
+## Sensors
+
+이 섹션에선 어떻게 파이썬에서 ALMemory로 부터 센서 값을 가져올 수 있는지를 보여준다.
+이를 실행하기 위해 예제 파일 내에서 로봇의 IP 주소를 수정한다. 
+
+### 압력센서 값
+
+sensors_getFsrValues.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use getData Method to Use FSR Sensors"""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    This example uses the getData method to use FSR sensors.
+    """
+    # Get the service ALMemory.
+
+    memory_service = session.service("ALMemory")
+
+    # Get The Left Foot Force Sensor Values
+    LFsrFL = memory_service.getData("Device/SubDeviceList/LFoot/FSR/FrontLeft/Sensor/Value")
+    LFsrFR = memory_service.getData("Device/SubDeviceList/LFoot/FSR/FrontRight/Sensor/Value")
+    LFsrBL = memory_service.getData("Device/SubDeviceList/LFoot/FSR/RearLeft/Sensor/Value")
+    LFsrBR = memory_service.getData("Device/SubDeviceList/LFoot/FSR/RearRight/Sensor/Value")
+
+    print( "Left FSR [Kg] : %.2f %.2f %.2f %.2f" %  (LFsrFL, LFsrFR, LFsrBL, LFsrBR) )
+
+    # Get The Right Foot Force Sensor Values
+    RFsrFL = memory_service.getData("Device/SubDeviceList/RFoot/FSR/FrontLeft/Sensor/Value")
+    RFsrFR = memory_service.getData("Device/SubDeviceList/RFoot/FSR/FrontRight/Sensor/Value")
+    RFsrBL = memory_service.getData("Device/SubDeviceList/RFoot/FSR/RearLeft/Sensor/Value")
+    RFsrBR = memory_service.getData("Device/SubDeviceList/RFoot/FSR/RearRight/Sensor/Value")
+
+    print( "Right FSR [Kg] : %.2f %.2f %.2f %.2f" %  (RFsrFL, RFsrFR, RFsrBL, RFsrBR) )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### 관성 센서 값
+
+sensors_getIntertialValues.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use getData Method to Get Inertial Values"""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    This example uses the getData method to get Inertial Values.
+    """
+    # Get the service ALMemory.
+
+    memory_service = session.service("ALMemory")
+
+    # Get the Gyrometers Values
+    GyrX = memory_service.getData("Device/SubDeviceList/InertialSensor/GyrX/Sensor/Value")
+    GyrY = memory_service.getData("Device/SubDeviceList/InertialSensor/GyrY/Sensor/Value")
+    print ("Gyrometers value X: %.3f, Y: %.3f" % (GyrX, GyrY))
+
+    # Get the Accelerometers Values
+    AccX = memory_service.getData("Device/SubDeviceList/InertialSensor/AccX/Sensor/Value")
+    AccY = memory_service.getData("Device/SubDeviceList/InertialSensor/AccY/Sensor/Value")
+    AccZ = memory_service.getData("Device/SubDeviceList/InertialSensor/AccZ/Sensor/Value")
+    print ("Accelerometers value X: %.3f, Y: %.3f, Z: %.3f" % (AccX, AccY,AccZ))
+
+    # Get the Compute Torso Angle in radian
+    TorsoAngleX = memory_service.getData("Device/SubDeviceList/InertialSensor/AngleX/Sensor/Value")
+    TorsoAngleY = memory_service.getData("Device/SubDeviceList/InertialSensor/AngleY/Sensor/Value")
+    print ("Torso Angles [radian] X: %.3f, Y: %.3f" % (TorsoAngleX, TorsoAngleY))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### 초음파
+
+sensors_sonar.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use getData Method to Use Sonars Sensors"""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    This example uses the getData method to use sonars sensors.
+    """
+    # Get the services ALMemory and ALSonar.
+
+    memory_service = session.service("ALMemory")
+    sonar_service = session.service("ALSonar")
+
+    # Subscribe to sonars, this will launch sonars (at hardware level)
+    # and start data acquisition.
+    sonar_service.subscribe("myApplication")
+
+    # Now you can retrieve sonar data from ALMemory.
+    # Get sonar left first echo (distance in meters to the first obstacle).
+    memory_service.getData("Device/SubDeviceList/US/Left/Sensor/Value")
+
+    # Same thing for right.
+    memory_service.getData("Device/SubDeviceList/US/Right/Sensor/Value")
+
+    # Unsubscribe from sonars, this will stop sonars (at hardware level)
+    sonar_service.unsubscribe("myApplication")
+
+    # Please read Sonar ALMemory keys section
+    # if you want to know the other values you can get.
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+~~~
+
+## 오디오
+## 오디오 장치
+
+이 섹션은 ALAudioDevice가 가능한 일을 보여준다.
+
+### 마이크 신호 처리
+마이크 신호를 가져오고 RMS 레벨을 계산한다.
+
+audio_soundprocessing.py
+
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Get Signal from Front Microphone & Calculate its rms Power"""
+
+
+import qi
+import argparse
+import sys
+import time
+import numpy as np
+
+
+class SoundProcessingModule(object):
+    """
+    A simple get signal from the front microphone of Nao & calculate its rms power.
+    It requires numpy.
+    """
+
+    def __init__( self, app):
+        """
+        Initialise services and variables.
+        """
+        super(SoundProcessingModule, self).__init__()
+        app.start()
+        session = app.session
+
+        # Get the service ALAudioDevice.
+        self.audio_service = session.service("ALAudioDevice")
+        self.isProcessingDone = False
+        self.nbOfFramesToProcess = 20
+        self.framesCount=0
+        self.micFront = []
+        self.module_name = "SoundProcessingModule"
+
+    def startProcessing(self):
+        """
+        Start processing
+        """
+        # ask for the front microphone signal sampled at 16kHz
+        # if you want the 4 channels call setClientPreferences(self.module_name, 48000, 0, 0)
+        self.audio_service.setClientPreferences(self.module_name, 16000, 3, 0)
+        self.audio_service.subscribe(self.module_name)
+
+        while self.isProcessingDone == False:
+            time.sleep(1)
+
+        self.audio_service.unsubscribe(self.module_name)
+
+    def processRemote(self, nbOfChannels, nbOfSamplesByChannel, timeStamp, inputBuffer):
+        """
+        Compute RMS from mic.
+        """
+        self.framesCount = self.framesCount + 1
+
+        if (self.framesCount <= self.nbOfFramesToProcess):
+            # convert inputBuffer to signed integer as it is interpreted as a string by python
+            self.micFront=self.convertStr2SignedInt(inputBuffer)
+            #compute the rms level on front mic
+            rmsMicFront = self.calcRMSLevel(self.micFront)
+            print "rms level mic front = " + str(rmsMicFront)
+        else :
+            self.isProcessingDone=True
+
+    def calcRMSLevel(self,data) :
+        """
+        Calculate RMS level
+        """
+        rms = 20 * np.log10( np.sqrt( np.sum( np.power(data,2) / len(data)  )))
+        return rms
+
+    def convertStr2SignedInt(self, data) :
+        """
+        This function takes a string containing 16 bits little endian sound
+        samples as input and returns a vector containing the 16 bits sound
+        samples values converted between -1 and 1.
+        """
+        signedData=[]
+        ind=0;
+        for i in range (0,len(data)/2) :
+            signedData.append(data[ind]+data[ind+1]*256)
+            ind=ind+2
+
+        for i in range (0,len(signedData)) :
+            if signedData[i]>=32768 :
+                signedData[i]=signedData[i]-65536
+
+        for i in range (0,len(signedData)) :
+            signedData[i]=signedData[i]/32768.0
+
+        return signedData
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["SoundProcessingModule", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    MySoundProcessingModule = SoundProcessingModule(app)
+    app.session.registerService("SoundProcessingModule", MySoundProcessingModule)
+    MySoundProcessingModule.startProcessing()
+
+~~~
+
+## Vision
+
+이 섹션에는 NAO의 카메라에서 이미지를 얻는 방법과 PIL 또는 PyQt로 시각화 하는 방법을 보여준다. 
+
+### 이미지 얻기
+로봇의 이미지를 얻어오는 예시다.
+videoInput_getImage.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Shows how images can be accessed through ALVideoDevice"""
+
+import qi
+import argparse
+import sys
+import time
+import vision_definitions
+
+
+
+def main(session):
+    """
+    This is just an example script that shows how images can be accessed
+    through ALVideoDevice in Python.
+    Nothing interesting is done with the images in this example.
+    """
+    # Get the service ALVideoDevice.
+
+    video_service = session.service("ALVideoDevice")
+
+    # Register a Generic Video Module
+    resolution = vision_definitions.kQQVGA
+    colorSpace = vision_definitions.kYUVColorSpace
+    fps = 20
+
+    nameId = video_service.subscribe("python_GVM", resolution, colorSpace, fps)
+
+    print 'getting images in remote'
+    for i in range(0, 20):
+        print "getting image " + str(i)
+        video_service.getImageRemote(nameId)
+        time.sleep(0.05)
+
+    video_service.unsubscribe(nameId)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### PIL을 사용해 이미지 시각화하기
+
+
+vision_getandsaveimage.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Get an image. Display it and save it using PIL."""
+
+import qi
+import argparse
+import sys
+import time
+import Image
+
+
+def main(session):
+    """
+    First get an image, then show it on the screen with PIL.
+    """
+    # Get the service ALVideoDevice.
+
+    video_service = session.service("ALVideoDevice")
+    resolution = 2    # VGA
+    colorSpace = 11   # RGB
+
+    videoClient = video_service.subscribe("python_client", resolution, colorSpace, 5)
+
+    t0 = time.time()
+
+    # Get a camera image.
+    # image[6] contains the image data passed as an array of ASCII chars.
+    naoImage = video_service.getImageRemote(videoClient)
+
+    t1 = time.time()
+
+    # Time the image transfer.
+    print "acquisition delay ", t1 - t0
+
+    video_service.unsubscribe(videoClient)
+
+
+    # Now we work with the image returned and save it as a PNG  using ImageDraw
+    # package.
+
+    # Get the image size and pixel array.
+    imageWidth = naoImage[0]
+    imageHeight = naoImage[1]
+    array = naoImage[6]
+    image_string = str(bytearray(array))
+
+    # Create a PIL Image from our pixel array.
+    im = Image.fromstring("RGB", (imageWidth, imageHeight), image_string)
+
+    # Save the image.
+    im.save("camImage.png", "PNG")
+
+    im.show()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+### PyQt 사용하여 NAO 이미지 실시간 시각화하기 
+
+vision_showimages.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Shows how to show live images from Nao using PyQt"""
+
+import qi
+import argparse
+import sys
+from PyQt4.QtGui import QWidget, QImage, QApplication, QPainter
+import vision_definitions
+
+
+def main(session, robot_ip, port):
+    """
+    This is a tiny example that shows how to show live images from Nao using PyQt.
+    You must have python-qt4 installed on your system.
+    """
+    CameraID = 0
+
+    # Get the service ALVideoDevice.
+
+    video_service = session.service("ALVideoDevice")
+    app = QApplication([robot_ip, port])
+    myWidget = ImageWidget(video_service, CameraID)
+    myWidget.show()
+    sys.exit(app.exec_())
+
+
+class ImageWidget(QWidget):
+    """
+    Tiny widget to display camera images from Naoqi.
+    """
+    def __init__(self, video_service, CameraID, parent=None):
+        """
+        Initialization.
+        """
+        QWidget.__init__(self, parent)
+        self.video_service = video_service
+        self._image = QImage()
+        self.setWindowTitle('Robot')
+
+        self._imgWidth = 320
+        self._imgHeight = 240
+        self._cameraID = CameraID
+        self.resize(self._imgWidth, self._imgHeight)
+
+        # Our video module name.
+        self._imgClient = ""
+
+        # This will contain this alImage we get from Nao.
+        self._alImage = None
+
+        self._registerImageClient()
+
+        # Trigget 'timerEvent' every 100 ms.
+        self.startTimer(100)
+
+
+    def _registerImageClient(self):
+        """
+        Register our video module to the robot.
+        """
+        resolution = vision_definitions.kQVGA  # 320 * 240
+        colorSpace = vision_definitions.kRGBColorSpace
+        self._imgClient = self.video_service.subscribe("_client", resolution, colorSpace, 5)
+
+        # Select camera.
+        self.video_service.setParam(vision_definitions.kCameraSelectID,
+                                  self._cameraID)
+
+
+    def _unregisterImageClient(self):
+        """
+        Unregister our naoqi video module.
+        """
+        if self._imgClient != "":
+            self.video_service.unsubscribe(self._imgClient)
+
+
+    def paintEvent(self, event):
+        """
+        Draw the QImage on screen.
+        """
+        painter = QPainter(self)
+        painter.drawImage(painter.viewport(), self._image)
+
+
+    def _updateImage(self):
+        """
+        Retrieve a new image from Nao.
+        """
+        self._alImage = self.video_service.getImageRemote(self._imgClient)
+        self._image = QImage(self._alImage[6],           # Pixel array.
+                             self._alImage[0],           # Width.
+                             self._alImage[1],           # Height.
+                             QImage.Format_RGB888)
+
+
+    def timerEvent(self, event):
+        """
+        Called periodically. Retrieve a nao image, and update the widget.
+        """
+        self._updateImage()
+        self.update()
+
+
+    def __del__(self):
+        """
+        When the widget is deleted, we unregister our naoqi video module.
+        """
+        self._unregisterImageClient()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session, args.ip, args.port)
+
+~~~
+
+## Video recording
+
+이 섹션은 다른 형식으로 NAO의 비디오를 녹화하는 예시이다.
+### avi로 녹화하기
+로봇에서 나오의 카메라를 .avi 형식으로 비디오로 녹화한다.
+
+vision_videorecord.py
+
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Demonstrates how to  to record a video file on the robot"""
+
+import qi
+import argparse
+import sys
+import time
+
+
+def main(session):
+    """
+    This example demonstrates how to use the ALVideoRecorder module to record a
+    video file on the robot.
+    """
+    # Get the service ALVideoRecorder.
+
+    vid_recorder_service = session.service("ALVideoRecorder")
+
+    # This records a 320*240 MJPG video at 10 fps.
+    # Note MJPG can't be recorded with a framerate lower than 3 fps.
+    vid_recorder_service.setResolution(1)
+    vid_recorder_service.setFrameRate(10)
+    vid_recorder_service.setVideoFormat("MJPG")
+    vid_recorder_service.startRecording("/home/nao/recordings/cameras", "myvideo")
+
+    time.sleep(5)
+
+    # Video file is saved on the robot in the
+    # /home/nao/recordings/cameras/ folder.
+    videoInfo = vid_recorder_service.stopRecording()
+
+    print "Video was saved on the robot: ", videoInfo[1]
+    print "Num frames: ", videoInfo[0]
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+## 얼굴 감지와 따라가기
+
+이 섹션은 ALFaceDetection가 가능한 일을 보여준다.
+
+### 감지기
+
+얼굴을 감지하고 얼굴에 대한 정보를 출력한다.
+
+vision_faceDetection.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: A Simple class to get & read FaceDetected Events"""
+
+import qi
+import time
+import sys
+import argparse
+
+
+class HumanGreeter(object):
+    """
+    A simple class to react to face detection events.
+    """
+
+    def __init__(self, app):
+        """
+        Initialisation of qi framework and event detection.
+        """
+        super(HumanGreeter, self).__init__()
+        app.start()
+        session = app.session
+        # Get the service ALMemory.
+        self.memory = session.service("ALMemory")
+        # Connect the event callback.
+        self.subscriber = self.memory.subscriber("FaceDetected")
+        self.subscriber.signal.connect(self.on_human_tracked)
+        # Get the services ALTextToSpeech and ALFaceDetection.
+        self.tts = session.service("ALTextToSpeech")
+        self.face_detection = session.service("ALFaceDetection")
+        self.face_detection.subscribe("HumanGreeter")
+        self.got_face = False
+
+    def on_human_tracked(self, value):
+        """
+        Callback for event FaceDetected.
+        """
+        if value == []:  # empty value when the face disappears
+            self.got_face = False
+        elif not self.got_face:  # only speak the first time a face appears
+            self.got_face = True
+            print "I saw a face!"
+            self.tts.say("Hello, you!")
+            # First Field = TimeStamp.
+            timeStamp = value[0]
+            print "TimeStamp is: " + str(timeStamp)
+
+            # Second Field = array of face_Info's.
+            faceInfoArray = value[1]
+            for j in range( len(faceInfoArray)-1 ):
+                faceInfo = faceInfoArray[j]
+
+                # First Field = Shape info.
+                faceShapeInfo = faceInfo[0]
+
+                # Second Field = Extra info (empty for now).
+                faceExtraInfo = faceInfo[1]
+
+                print "Face Infos :  alpha %.3f - beta %.3f" % (faceShapeInfo[1], faceShapeInfo[2])
+                print "Face Infos :  width %.3f - height %.3f" % (faceShapeInfo[3], faceShapeInfo[4])
+                print "Face Extra Infos :" + str(faceExtraInfo)
+
+    def run(self):
+        """
+        Loop on, wait for events until manual interruption.
+        """
+        print "Starting HumanGreeter"
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print "Interrupted by user, stopping HumanGreeter"
+            self.face_detection.unsubscribe("HumanGreeter")
+            #stop
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["HumanGreeter", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+
+    human_greeter = HumanGreeter(app)
+    human_greeter.run()
+
+~~~
+
+### 따라가기
+
+얼굴을 감지하고 NAO의 머리가 따라간다.
+
+vision_setfacetracking.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Modify Face Tracking policy on the robot."""
+
+import qi
+import argparse
+import sys
+
+
+def main(session):
+    """
+    When tracking is activated, faces looking sideways, or located further away
+    should be tracked for a longer period.
+    Launch Monitor, Camera-Viewer, activate face detection, and see if it works better.
+    """
+
+    tracking_enabled = True
+
+    # Get the service ALFaceDetection.
+
+    face_service = session.service("ALFaceDetection")
+
+    print "Will set tracking to '%s' on the robot ..." % tracking_enabled
+
+    # Enable or disable tracking.
+    face_service.enableTracking(tracking_enabled)
+
+    # Just to make sure correct option is set.
+    print "Is tracking now enabled on the robot?", face_service.isTrackingEnabled()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+~~~
+
+ALLandMarkDetection의 예시이다.
+
+### 랜드마크 감지하기
+
+랜드마크를 감지하고, 랜드마크의 정보를 출력한다.
+
+vision_landMarkDetection.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Demonstrates how to use the ALLandMarkDetection module."""
+
+import qi
+import time
+import sys
+import argparse
+
+
+class LandmarkDetector(object):
+    """
+    We first instantiate a proxy to the ALLandMarkDetection module
+    Note that this module should be loaded on the robot's naoqi.
+    The module output its results in ALMemory in a variable
+    called "LandmarkDetected".
+    We then read this ALMemory value and check whether we get
+    interesting things.
+    """
+
+    def __init__(self, app):
+        """
+        Initialisation of qi framework and event detection.
+        """
+        super(LandmarkDetector, self).__init__()
+        app.start()
+        session = app.session
+        # Get the service ALMemory.
+        self.memory = session.service("ALMemory")
+        # Connect the event callback.
+        self.subscriber = self.memory.subscriber("LandmarkDetected")
+        self.subscriber.signal.connect(self.on_landmark_detected)
+        # Get the services ALTextToSpeech and ALLandMarkDetection.
+        self.tts = session.service("ALTextToSpeech")
+        self.landmark_detection = session.service("ALLandMarkDetection")
+        self.landmark_detection.subscribe("LandmarkDetector", 500, 0.0 )
+        self.got_landmark = False
+
+    def on_landmark_detected(self, value):
+        """
+        Callback for event LandmarkDetected.
+        """
+        if value == []:  # empty value when the landmark disappears
+            self.got_landmark = False
+        elif not self.got_landmark:  # only speak the first time a landmark appears
+            self.got_landmark = True
+            print "I saw a landmark! "
+            self.tts.say("I saw a landmark! ")
+            # First Field = TimeStamp.
+            timeStamp = value[0]
+            print "TimeStamp is: " + str(timeStamp)
+
+            # Second Field = array of mark_Info's.
+            markInfoArray = value[1]
+            for markInfo in markInfoArray:
+
+                # First Field = Shape info.
+                markShapeInfo = markInfo[0]
+
+                # Second Field = Extra info (ie, mark ID).
+                markExtraInfo = markInfo[1]
+                print "mark  ID: %d" % (markExtraInfo[0])
+                print "  alpha %.3f - beta %.3f" % (markShapeInfo[1], markShapeInfo[2])
+                print "  width %.3f - height %.3f" % (markShapeInfo[3], markShapeInfo[4])
+
+    def run(self):
+        """
+        Loop on, wait for events until manual interruption.
+        """
+        print "Starting LandmarkDetector"
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print "Interrupted by user, stopping LandmarkDetector"
+            self.landmark_detection.unsubscribe("LandmarkDetector")
+            #stop
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["LandmarkDetector", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    landmark_detector = LandmarkDetector(app)
+    landmark_detector.run()
+
+~~~
+
+### 랜드마크 감지의 Callback
+
+ALMemory에서 올바른 Event를 요청받음으로써 랜드마크 검출에 반응한다.
+
+vision_onMarkDataChange.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Demonstrates how to use the ALLandMarkDetection module."""
+
+import qi
+import time
+import sys
+import argparse
+
+
+class LandmarkDetector(object):
+    """
+    We first instantiate a proxy to the ALLandMarkDetection module
+    Note that this module should be loaded on the robot's naoqi.
+    The module output its results in ALMemory in a variable
+    called "LandmarkDetected".
+    We then read this ALMemory value and check whether we get
+    interesting things.
+    """
+
+    def __init__(self, app):
+        """
+        Initialisation of qi framework and event detection.
+        """
+        super(LandmarkDetector, self).__init__()
+        app.start()
+        session = app.session
+        # Get the service ALMemory.
+        self.memory = session.service("ALMemory")
+        # Connect the event callback.
+        self.subscriber = self.memory.subscriber("LandmarkDetected")
+        self.subscriber.signal.connect(self.on_landmark_detected)
+        # Get the services ALTextToSpeech and ALLandMarkDetection.
+        self.tts = session.service("ALTextToSpeech")
+        self.landmark_detection = session.service("ALLandMarkDetection")
+        self.landmark_detection.subscribe("LandmarkDetector", 500, 0.0 )
+        self.got_landmark = False
+
+    def on_landmark_detected(self, value):
+        """
+        Callback for event LandmarkDetected.
+        """
+        if value == []:  # empty value when the landmark disappears
+            self.got_landmark = False
+        elif not self.got_landmark:  # only speak the first time a landmark appears
+            self.got_landmark = True
+            print "I saw a landmark! "
+            self.tts.say("I saw a landmark! ")
+            # First Field = TimeStamp.
+            timeStamp = value[0]
+            print "TimeStamp is: " + str(timeStamp)
+
+            # Second Field = array of mark_Info's.
+            markInfoArray = value[1]
+            for markInfo in markInfoArray:
+
+                # First Field = Shape info.
+                markShapeInfo = markInfo[0]
+
+                # Second Field = Extra info (ie, mark ID).
+                markExtraInfo = markInfo[1]
+                print "mark  ID: %d" % (markExtraInfo[0])
+                print "  alpha %.3f - beta %.3f" % (markShapeInfo[1], markShapeInfo[2])
+                print "  width %.3f - height %.3f" % (markShapeInfo[3], markShapeInfo[4])
+
+    def run(self):
+        """
+        Loop on, wait for events until manual interruption.
+        """
+        print "Starting LandmarkDetector"
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print "Interrupted by user, stopping LandmarkDetector"
+            self.landmark_detection.unsubscribe("LandmarkDetector")
+            #stop
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["LandmarkDetector", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    landmark_detector = LandmarkDetector(app)
+    landmark_detector.run()
+
+~~~
+
+### 랜드마크 위치추적
+
+transform을 사용해 랜드마크를 감지하고 로봇 공간안에서 위치를 추적한다.
+
+vision_localization.py
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Demonstrates a way to localize the robot with ALLandMarkDetection"""
+
+import qi
+import time
+import sys
+import argparse
+import math
+import almath
+
+
+class LandmarkDetector(object):
+    """
+    We first instantiate a proxy to the ALLandMarkDetection module
+    Note that this module should be loaded on the robot's naoqi.
+    The module output its results in ALMemory in a variable
+    called "LandmarkDetected".
+    We then read this ALMemory value and check whether we get
+    interesting things.
+    After that we get the related position of the landmark compared to robot.
+    """
+
+    def __init__(self, app):
+        """
+        Initialisation of qi framework and event detection.
+        """
+        super(LandmarkDetector, self).__init__()
+        app.start()
+        session = app.session
+        # Get the service ALMemory.
+        self.memory = session.service("ALMemory")
+        # Connect the event callback.
+        self.subscriber = self.memory.subscriber("LandmarkDetected")
+        self.subscriber.signal.connect(self.on_landmark_detected)
+        # Get the services ALTextToSpeech, ALLandMarkDetection and ALMotion.
+        self.tts = session.service("ALTextToSpeech")
+        self.landmark_detection = session.service("ALLandMarkDetection")
+        self.motion_service = session.service("ALMotion")
+        self.landmark_detection.subscribe("LandmarkDetector", 500, 0.0 )
+        self.got_landmark = False
+        # Set here the size of the landmark in meters.
+        self.landmarkTheoreticalSize = 0.06 #in meters
+        # Set here the current camera ("CameraTop" or "CameraBottom").
+        self.currentCamera = "CameraTop"
+
+    def on_landmark_detected(self, markData):
+        """
+        Callback for event LandmarkDetected.
+        """
+        if markData == []:  # empty value when the landmark disappears
+            self.got_landmark = False
+        elif not self.got_landmark:  # only speak the first time a landmark appears
+            self.got_landmark = True
+            print "I saw a landmark! "
+            self.tts.say("I saw a landmark! ")
+
+            # Retrieve landmark center position in radians.
+            wzCamera = markData[1][0][0][1]
+            wyCamera = markData[1][0][0][2]
+
+            # Retrieve landmark angular size in radians.
+            angularSize = markData[1][0][0][3]
+
+            # Compute distance to landmark.
+            distanceFromCameraToLandmark = self.landmarkTheoreticalSize / ( 2 * math.tan( angularSize / 2))
+
+            # Get current camera position in NAO space.
+            transform = self.motion_service.getTransform(self.currentCamera, 2, True)
+            transformList = almath.vectorFloat(transform)
+            robotToCamera = almath.Transform(transformList)
+
+            # Compute the rotation to point towards the landmark.
+            cameraToLandmarkRotationTransform = almath.Transform_from3DRotation(0, wyCamera, wzCamera)
+
+            # Compute the translation to reach the landmark.
+            cameraToLandmarkTranslationTransform = almath.Transform(distanceFromCameraToLandmark, 0, 0)
+
+            # Combine all transformations to get the landmark position in NAO space.
+            robotToLandmark = robotToCamera * cameraToLandmarkRotationTransform *cameraToLandmarkTranslationTransform
+
+            print "x " + str(robotToLandmark.r1_c4) + " (in meters)"
+            print "y " + str(robotToLandmark.r2_c4) + " (in meters)"
+            print "z " + str(robotToLandmark.r3_c4) + " (in meters)"
+
+    def run(self):
+        """
+        Loop on, wait for events until manual interruption.
+        """
+        print "Starting LandmarkDetector"
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print "Interrupted by user, stopping LandmarkDetector"
+            self.landmark_detection.unsubscribe("LandmarkDetector")
+            #stop
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    try:
+        # Initialize qi framework.
+        connection_url = "tcp://" + args.ip + ":" + str(args.port)
+        app = qi.Application(["LandmarkDetector", "--qi-url=" + connection_url])
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    landmark_detector = LandmarkDetector(app)
+    landmark_detector.run()
+
+~~~
+
