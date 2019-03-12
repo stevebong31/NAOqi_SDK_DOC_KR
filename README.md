@@ -145,7 +145,7 @@ motion.wait(id, 0)
 
 이것을 하기 위해서, 우리는 ALFacedetection모듈이 만드는 ‘FaceDetected’ Event를 요청받아 Callback에 링크해야 한다. Callback은 Event가 발생할 때마다 실행되는 기능이다.
 
-예시는 아래에 있다 : 스크립트를 실랭하고 로봇앞에 얼굴을 내밀어라. 너는 'hello, you' 라는 말을 들을 수 있다.
+예시는 아래에 있다 : 스크립트를 실행하고 로봇앞에 얼굴을 내밀어라. 너는 'hello, you' 라는 말을 들을 수 있다.
 
 reacting_to_events.py
 
@@ -1931,3 +1931,10 @@ if __name__ == "__main__":
     main(session, args.chain)
 
 ~~~
+
+## ALMath
+
+이 섹션은 libalmath Python wrapping을 어떻게 사용하는지 보여준다. Wrapping은 이 라이브러리에 포함된 모든 기능을 사용할 수 있게 해주며, 이는 동작과 관련된 연산(예:이펙터 위치)에 유용하다.
+
+### Python wrapping
+libalmath는 파이썬으로 Wrapping 되어 있다. 예를 들어 Choregraphe 또는 Python 스크립트에서 이 라이브러리를 사용할 수 있게 한다.
