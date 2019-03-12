@@ -1380,7 +1380,7 @@ if __name__ == "__main__":
 ~~~
 
 
-### Hula Hoop
+### 훌라후프
 almotion_hulaHoop.py
 
 ~~~
@@ -1499,3 +1499,435 @@ if __name__ == "__main__":
 
 ~~~
 
+### 팔과 몸통
+
+여러 개의 이펙터를 좌표 명령으로 움직일 수 있다.
+
+#### Trajectory 1
+almotion_cartesianTorsoArm1.py
+~~~
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Arm and Torso"""
+
+import qi
+import argparse
+import sys
+import almath
+import motion
+
+
+def main(session):
+    """
+    Use transformInterpolations Method on Arm and Torso
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    frame      = motion.FRAME_WORLD
+    coef       = 0.5                   # motion speed
+    times      = [coef, 2.0*coef, 3.0*coef, 4.0*coef]
+    useSensorValues = False
+
+    # Relative movement between current and desired positions
+    dy         = +0.03                 # translation axis Y (meters)
+    dz         = -0.03                 # translation axis Z (meters)
+    dwx        = +8.0*almath.TO_RAD   # rotation axis X (radians)
+
+    # Motion of Torso with _async process
+    effector   = "Torso"
+
+    path = []
+    initTf = almath.Transform(motion_service.getTransform(effector, frame, useSensorValues))
+    # point 1
+    deltaTf  = almath.Transform(0.0, -dy, dz)*almath.Transform().fromRotX(-dwx)
+    targetTf = initTf*deltaTf
+    path.append(list(targetTf.toVector()))
+
+    # point 2
+    path.append(list(initTf.toVector()))
+
+    # point 3
+    deltaTf  = almath.Transform(0.0, dy, dz)*almath.Transform().fromRotX(dwx)
+    targetTf = initTf*deltaTf
+    path.append(list(targetTf.toVector()))
+
+    # point 4
+    path.append(list(initTf.toVector()))
+
+    axisMask   = almath.AXIS_MASK_ALL  # control all the effector axes
+    motion_service.transformInterpolations(effector, frame, path,
+                                           axisMask, times, _async=True)
+
+    # Motion of Arms with block process
+    frame     = motion.FRAME_TORSO
+    axisMask  = almath.AXIS_MASK_VEL  # control just the position
+    times     = [1.0*coef, 2.0*coef]  # seconds
+
+    # Motion of Right Arm during the first half of the Torso motion
+    effector  = "RArm"
+
+    path = []
+    currentTf = motion_service.getTransform(effector, frame, useSensorValues)
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 -= 0.04 # y
+    path.append(list(targetTf.toVector()))
+    path.append(currentTf)
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Motion of Left Arm during the last half of the Torso motion
+    effector   = "LArm"
+
+    path = []
+    currentTf = motion_service.getTransform(effector, frame, useSensorValues)
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 += 0.04 # y
+    path.append(list(targetTf.toVector()))
+    path.append(currentTf)
+
+    motion_service.transformInterpolations(effector, frame, path, axisMask, times)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+#### Trajectory 2
+
+almotion_cartesianTorsoArm2.py
+
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""Example: Use transformInterpolations Method on Arm and Torso"""
+
+import qi
+import argparse
+import sys
+import motion
+import almath
+
+
+def main(session):
+    """
+    Use transformInterpolations Method on Arm and Torso.
+    """
+    # Get the services ALMotion & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    frame      = motion.FRAME_ROBOT
+    useSensorValues = False
+
+    effectorList = ["LArm", "RArm"]
+
+    # Motion of Arms with block process
+    axisMaskList = [almath.AXIS_MASK_VEL, almath.AXIS_MASK_VEL]
+
+    timesList    = [[1.0], [1.0]] # seconds
+
+    # LArm path
+    pathLArm = []
+    targetTf  = almath.Transform(motion_service.getTransform("LArm", frame, useSensorValues))
+    targetTf.r2_c4 -= 0.04 # y
+    pathLArm.append(list(targetTf.toVector()))
+
+    # RArm path
+    pathRArm = []
+    targetTf  = almath.Transform(motion_service.getTransform("RArm", frame, useSensorValues))
+    targetTf.r2_c4 += 0.04 # y
+    pathRArm.append(list(targetTf.toVector()))
+
+    pathList = []
+    pathList.append(pathLArm)
+    pathList.append(pathRArm)
+
+    motion_service.transformInterpolations(effectorList, frame, pathList,
+                                       axisMaskList, timesList)
+
+    effectorList = ["LArm", "RArm", "Torso"]
+
+    # Motion of Arms and Torso with block process
+    axisMaskList = [almath.AXIS_MASK_VEL,
+                    almath.AXIS_MASK_VEL,
+                    almath.AXIS_MASK_ALL]
+
+    timesList    = [[4.0],                  # LArm  in seconds
+                    [4.0],                  # RArm  in seconds
+                    [1.0, 2.0, 3.0, 4.0]]   # Torso in seconds
+
+    # LArm path
+    pathLArm = []
+    pathLArm.append(motion_service.getTransform("LArm", frame, useSensorValues))
+
+    # RArm path
+    pathRArm = []
+    pathRArm.append(motion_service.getTransform("RArm", frame, useSensorValues))
+
+    # Torso path
+    pathTorso = []
+    currentTf = motion_service.getTransform("Torso", frame, useSensorValues)
+
+    # 1
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 += 0.04 # y
+    pathTorso.append(list(targetTf.toVector()))
+
+    # 2
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r1_c4 -= 0.03 # x
+    pathTorso.append(list(targetTf.toVector()))
+
+    # 3
+    targetTf  = almath.Transform(currentTf)
+    targetTf.r2_c4 -= 0.04 # y
+    pathTorso.append(list(targetTf.toVector()))
+
+    # 4
+    pathTorso.append(currentTf)
+
+    pathList = []
+    pathList.append(pathLArm)
+    pathList.append(pathRArm)
+    pathList.append(pathTorso)
+
+    motion_service.transformInterpolations(effectorList, frame, pathList,
+                                       axisMaskList, timesList)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+
+~~~
+
+## Whole body motion 
+
+## 충돌 감지
+
+이 에시는 NAO의 팔에 대한 충돌 감지 반응에 대해 보여준다. 충돌 감지가 없다면 물체에 부딪히고, 충돌 감지가 있다면 물체를 피한다.
+
+almotion_collisionDetection.py
+
+~~~
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+''' Example :Collision detection - Arm Collision Detection '''
+
+import qi
+import argparse
+import sys
+import almath
+import time
+
+
+def moveArm(motion_service, target, has_hands, chain_name):
+    ''' Function to make NAO bump on his Torso or Head with his arm '''
+
+    # Set the fraction of max speed for the arm movement.
+    pMaxSpeedFraction = 0.5
+
+    # Define the final position.
+    if target == "Torso":
+        shoulderPitchAngle = 50
+    elif target == "Head":
+        shoulderPitchAngle = -50
+    else:
+        print "ERROR: target is unknown"
+        print "Must be Torso or Head"
+        print "---------------------"
+        exit(1)
+
+    ShoulderRollAngle  = 6
+    ElbowYawAngle      = 0
+    ElbowRollAngle     = -150
+
+    if chain_name == "LArm":
+        targetAngles = [shoulderPitchAngle, +ShoulderRollAngle,
+            +ElbowYawAngle, +ElbowRollAngle]
+    elif chain_name == "RArm":
+        targetAngles = [shoulderPitchAngle, -ShoulderRollAngle,
+            -ElbowYawAngle, -ElbowRollAngle]
+    else:
+        print "ERROR: chainName is unknown"
+        print "Must be LArm or RArm"
+        print "---------------------"
+        exit(1)
+
+    # Set the target angles according to the robot version.
+    if has_hands:
+        targetAngles += [0.0, 0.0]
+
+    # Convert to radians.
+    targetAngles = [x * almath.TO_RAD for x in targetAngles]
+
+    # Move the arm to the final position.
+    motion_service.angleInterpolationWithSpeed(
+        chain_name, targetAngles, pMaxSpeedFraction)
+
+
+def main(session, chain_name):
+    """
+    Collision detection : arm collision detection
+    """
+    # Get the services ALMotion, ALRobotModel & ALRobotPosture.
+
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+    model_service = session.service("ALRobotModel")
+
+    if model_service.getRobotType() != "Nao" or not model_service.hasArms():
+        print "This test is not available for your Robot"
+        print "---------------------"
+        exit(1)
+
+    # Wake up robot
+    motion_service.wakeUp()
+
+    # Send robot to Stand Init
+    posture_service.goToPosture("StandInit", 0.5)
+
+    has_hands = model_service.hasHands()
+
+    ###############################
+    # Arm motion bumping on torso #
+    ###############################
+
+    # Disable collision detection on chainName.
+    is_enable = False
+    success = motion_service.setCollisionProtectionEnabled(chain_name, is_enable)
+    if (not success):
+        print("Failed to disable collision protection")
+    time.sleep(1.0)
+
+    # Make NAO's arm move so that it bumps its torso.
+    target = "Torso"
+    moveArm(motion_service, target, has_hands, chain_name)
+    time.sleep(1.0)
+
+    # Go back to pose init.
+    posture_service.goToPosture("StandInit", 1.0)
+
+    # Enable collision detection on chainName.
+    is_enable = True
+    success = motion_service.setCollisionProtectionEnabled(chain_name, is_enable)
+    if (not success):
+        print("Failed to enable collision protection")
+    time.sleep(1.0)
+
+    # Make NAO's arm move and see that it does not bump on the torso.
+    target = "Torso"
+    moveArm(motion_service, target, has_hands, chain_name)
+
+    ##############################
+    # Arm motion bumping on head #
+    ##############################
+
+    time.sleep(1.0)
+    # Go back to pose init.
+    posture_service.goToPosture("StandInit", 1.0)
+    # Disable collision detection on chainName.
+    is_enable = False
+    success = motion_service.setCollisionProtectionEnabled(chain_name, is_enable)
+    if (not success):
+        print("Failed to disable collision protection")
+    time.sleep(1.0)
+    # Make NAO's arm move so that it bumps its head.
+    target = "Head"
+    moveArm(motion_service, target, has_hands, chain_name)
+
+    time.sleep(1.0)
+    # Go back to pose init.
+    posture_service.goToPosture("StandInit", 1.0)
+    # Enable collision detection on chainName.
+    is_enable = True
+    success = motion_service.setCollisionProtectionEnabled(chain_name, is_enable)
+    if (not success):
+        print("Failed to enable collision protection")
+    # Make NAO's arm move and see that it does not bump on the head.
+    target = "Head"
+    moveArm(motion_service, target, has_hands, chain_name)
+
+    time.sleep(1.0)
+    # Go back to pose init.
+    posture_service.goToPosture("StandInit", 1.0)
+
+    # Go to rest position
+    motion_service.rest()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+    parser.add_argument("--chain", type=str, default="LArm",
+                        choices=["LArm", "RArm"], help="Chain name")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session, args.chain)
+
+~~~
