@@ -25,3 +25,116 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 잠재적 장애물은 직접적으로 보이지 않더라도 메모리에 남아 있을 수 있다. 이 메모리는 최대 15초까지 유지된다.
 
 ### 탐색과 위치 추적
+
+페퍼는 다음 기능이 가능하다:
+- 자동으로 미지의 환경을 탐험한다;
+- 환경에 대해 지도를 작성한다;
+- 맵으로 내비게이션을 하며 자신의 위치를 파악한다.
+
+자신의 위치를 파악하고 미지의 환경을 매핑하는 과정은 SLAM 이라고 알려져 있다.
+탐사 중, 페퍼는 자신의 Odometry와 레이저 센서로 SLAM을 수행한다.
+
+페퍼가 한번 탐사를 끝내면, 맵은 2D 이미지로 변환된다.
+
+
+## ALNavigation API 
+
+### Method list
+
+이 모듈은 ALModule API로부터 Method를 상속받는다. 이 모듈은 다음과 같은 구체적인 Method들을 포함한다.
+
+#### class ALNavigationProxy
+
+#### Navigation API:
+- ALNavigationProxy::navigateTo
+- ALNavigationProxy::moveAlong
+- ALNavigationProxy::getFreeZone
+- ALNavigationProxy::findFreeZone
+
+#### Exploration and localization API:
+- ALNavigationProxy::explore
+- ALNavigationProxy::stopExploration
+- ALNavigationProxy::saveExploration
+- ALNavigationProxy::getMetricalMap
+- ALNavigationProxy::navigateToInMap
+- ALNavigationProxy::getRobotPositionInMap
+- ALNavigationProxy::loadExploration
+- ALNavigationProxy::relocalizeInMap
+- ALNavigationProxy::startLocalization
+- ALNavigationProxy::stopLocalization
+
+#####Deprecated methods:
+- ALNavigationProxy::startFreeZoneUpdate
+- ALNavigationProxy::stopAndComputeFreeZone
+
+
+#### Event list
+- Navigation/AvoidanceNavigator/Status()
+- Navigation/AvoidanceNavigator/ObstacleDetected()
+- Navigation/AvoidanceNavigator/MovingToFreeZone()
+- Navigation/AvoidanceNavigator/TrajectoryProgress()
+- Navigation/AvoidanceNavigator/AbsTargetModified()
+- Navigation/MotionDetected()
+
+
+
+### Methods
+
+#### bool ALNavigationProxy::navigateTo(const float& x, const float& y)
+
+FRAME_ROBOT에 표시된 상대적인 측량으로 2D 상에서 로봇을 이동하게 만든다. 로봇은 환경과 충돌하지 않도록 안전한 움직임을 취할 것이다. 얘를 들어, 머리로 보고, 멈춘 뒤 경로를 다시 설게한다. 따라서 머리의 리소스를 사용하는 동작은 네비게이션과 같은 타임라인에서 실행할 수 없다.
+
+ALMotionProxy::moveTo와 달리 로봇은 이동하면서 자신의 경로와 속도를 선택한다. 속도는 로봇이 장애물에 가까이 접근할 경우 감소한다. 장애물 회피가 위험해지면(security 영역에서 장애물이 감지되자마자) ALMotionProxy::moveTo와 같이 로봇이 정지한다.
+
+대상(목표 지점)은 로봇으로 부터 3m 이상 떨어져 있어야 하며, 그렇지 않으면 명령이 무시되고 경고가 발생한다.
+
+이것은 blocking call이다.
+
+#### Parameters:	
+- x – X축으로 떨어져 있는 거리(meter)
+- y – Y축으로 떨어져 있는 거리(meter)
+- Returns:	
+로봇이 마지막 목표에 도달한 경우, 장애물에 의해 정지한 경우 또는 목표에 대해 경로를 찾을 수 없는 경우라면 True를 반환한다. 
+
+~~~
+navigationProxy.navigateTo(2.0, 0.0)
+~~~
+
+#### bool ALNavigationProxy::moveAlong(const AL::ALValue& trajectory)
+
+#### Parameters:	
+- trajectory –
+direct trajectory [“Holonomic”, pathXY, finalTheta, finalTime] 또는 composed trajectory [“Composed”, direct trajectories]을 기술하는 ALValue.
+
+    pathXY는 2D path를 기술하는 ALValue이고, direct path 또는 composed 중 하나이다: [“Composed”, direct paths]
+
+    Direct path는: [“Line”, [finalX, finalY]], [“Circle”, [centerX, centerY], spanAngle]로 구성된 선 또는 원(호)일 수 있다.
+
+- Returns: 로봇이 trajectory 완전히 수행했을 경우, 그리고 장애물에 의해 정지했을 경우에 True를 반환한다.
+
+다음 커맨드는 5초안에 1미터 앞으로, 10초 안에 1미터 뒤로 정지 없이 이동한다.
+
+~~~
+navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 5.0], ["Holonomic", ["Line", [-1.0, 0.0]], 0.0, 10.0]])
+~~~
+
+#### AL::ALValue ALNavigationProxy::getFreeZone(float desiredRadius, float displacementConstraint)
+
+로봇의 주변 free zone을 출력한다. 로봇이 움직이지 않는다.
+
+#### Parameters:
+- desiredRadius – 우리가 원하는 free space 반경(meter)
+- displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
+- Returns: ALValue [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]] 
+
+#### qi::Future<AL::ALValue> ALNavigationProxy::findFreeZone(float desiredRadius, float displacementConstraint)
+
+지정한 이동보다 크지 않는, 지정된 반경의 free circular zone를 찾는다. 이를 위해 로봇은 스스로 움직이고 주위를 둘러본다. 
+(blocking call)
+
+- Parameters:	
+desiredRadius – The radius of free space we want in meters.
+displacementConstraint – The max distance we accept to move to reach the found place in meters.
+- Returns:	
+a cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
+
