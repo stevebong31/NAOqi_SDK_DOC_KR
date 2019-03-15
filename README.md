@@ -3,6 +3,7 @@
 #### 해당 문서는 NAOqi의 Python SDK 사용을 위한 추가 분석 한글 문서입니다.
 #### 작성자가 주로 사용하는 Method 순서로 정리됩니다.
 
+원본 문서 링크 : http://doc.aldebaran.com/2-5/index_dev_guide.html
 
 
 ## Update log
@@ -13,5 +14,6 @@ ALNavigation/ALNavigation_API.md 문서 정리되었습니다. (2018-03-15)
 
 
 
-원본 문서 링크 : http://doc.aldebaran.com/2-5/index_dev_guide.html
+
+
 
