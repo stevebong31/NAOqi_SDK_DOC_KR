@@ -63,7 +63,7 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 - ALNavigationProxy::startLocalization
 - ALNavigationProxy::stopLocalization
 
-#####Deprecated methods:
+#### Deprecated methods:
 - ALNavigationProxy::startFreeZoneUpdate
 - ALNavigationProxy::stopAndComputeFreeZone
 
@@ -96,7 +96,7 @@ ALMotionProxy::moveTo와 달리 로봇은 이동하면서 자신의 경로와 �
 - Returns:	
 로봇이 마지막 목표에 도달한 경우, 장애물에 의해 정지한 경우 또는 목표에 대해 경로를 찾을 수 없는 경우라면 True를 반환한다. 
 
-~~~
+~~~ python
 navigationProxy.navigateTo(2.0, 0.0)
 ~~~
 
@@ -114,13 +114,13 @@ direct trajectory [“Holonomic”, pathXY, finalTheta, finalTime] 또는 compos
 
 다음 커맨드는 5초안에 1미터 앞으로, 10초 안에 1미터 뒤로 정지 없이 이동한다.
 
-~~~
+~~~ python
 navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 5.0], ["Holonomic", ["Line", [-1.0, 0.0]], 0.0, 10.0]])
 ~~~
 
 #### AL::ALValue ALNavigationProxy::getFreeZone(float desiredRadius, float displacementConstraint)
 
-로봇의 주변 free zone을 출력한다. 로봇이 움직이지 않는다.
+로봇의 주변 free zone을 출력한다. 로봇이 움직이지 않는다. free space 또는 free zone은 로봇이 이동가능한 공간을 의미한다.
 
 #### Parameters:
 - desiredRadius – 우리가 원하는 free space 반경(meter)
@@ -133,8 +133,91 @@ navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 
 (blocking call)
 
 - Parameters:	
-desiredRadius – The radius of free space we want in meters.
-displacementConstraint – The max distance we accept to move to reach the found place in meters.
-- Returns:	
-a cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
+desiredRadius – 우리가 원하는 free space의 반경(meter)
+displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
 
+- Returns:	
+cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
+
+~~~ python
+desiredRadius = 0.6
+displacementConstraint = 0.5
+navigationProxy.findFreeZone(desiredRadius, displacementConstraint)
+~~~
+#### AL::ALValue ALNavigationProxy::startFreeZoneUpdate() (2.5 verson 이후로 사용 X)
+
+### Python script을 위한 파이썬 스크립트
+
+다음 코드가 정상적으로 동작한다면 로봇은 free zone의 중심으로 이동한다.
+
+alnavigation.py
+
+~~~ python
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""예제 : findFreeZone Method"""
+
+import qi
+import argparse
+import sys
+import almath
+import math
+
+
+def main(session):
+
+    # ALNavigation, ALMotion, ALRobotPosture를 프록시로 할당한다.
+
+    navigation_service = session.service("ALNavigation")
+    motion_service = session.service("ALMotion")
+    posture_service = session.service("ALRobotPosture")
+
+    # 로봇 깨우기 구동.
+    motion_service.wakeUp()
+
+    # 로봇 자세 초기화.
+    posture_service.goToPosture("StandInit", 0.5)
+
+    # 환경 탐색
+    # navigation_service.startFreeZoneUpdate()
+    navigation_service.getFreeZone()
+    ###########################################################################
+    # 이곳에 timeline과 이동하는 animation을 추가한다. #
+    # For example : 360도 회전
+    motion_service.moveTo(0.0, 0.0, 2.0 * math.pi) 
+    ###########################################################################
+    desiredRadius = 0.6
+    displacementConstraint = 0.5
+    result = navigation_service.findFreeZone(desiredRadius, displacementConstraint)
+
+    errorCode = result[0]
+    if errorCode != 1:
+        # 코드가 정상 동작시 Freezone의 중앙으로 이동.
+        worldToCenterFreeZone = almath.Pose2D(result[2][0], result[2][1], 0.0)
+        worldToRobot = almath.Pose2D(motion_service.getRobotPosition(True))
+        robotToFreeZoneCenter = almath.pinv(worldToRobot) * worldToCenterFreeZone
+        motion_service.moveTo(robotToFreeZoneCenter.x, robotToFreeZoneCenter.y, 0.0)
+    else :
+        print "Problem during the update of the free zone."
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session)
+    
+~~~

@@ -22,7 +22,7 @@ Python을 사용하는 것은 Aldebaran 로봇을 프로그래밍하는 가장 �
 
 이는 다음 예에서 확인 할 수 있으며, 자세한 것은 튜토리얼에서 설명합니다.
 
-~~~
+~~~ python
 from naoqi import ALProxy
 tts = ALProxy("ALTextToSpeech", "<IP of your robot>", 9559)
 tts.say("Hello, world!")
@@ -39,10 +39,10 @@ ALProxy 객체를 통해 모듈에 대한 프록시(클라이언트와 서버 �
 
 사용가능한 Broker instance가 있는지 여부에 따라 두 개의 다른 constructors를 지원한다. 
 
-~~~
+~~~ python
 ALProxy(name, ip, port)
 ~~~
-~~~
+~~~ python
 ALProxy(name)
 ~~~
 
@@ -62,7 +62,7 @@ ALProxy(name)
 
 다음 코드를 실행해보시오 :
 
-~~~
+~~~ python
 from naoqi import ALProxy
 tts = ALProxy("ALTextToSpeech", "<IP of your robot>", 9559)
 tts.say("Hello, world!")
@@ -71,7 +71,7 @@ tts.say("Hello, world!")
 ### 프록시 사용하기 
 
 ALProxy는 당신이 연결할 모듈에 적응하는 객체이다.
-~~~
+~~~ python
 class ALProxy(name, ip, port)
 ~~~
 
@@ -81,7 +81,7 @@ class ALProxy(name, ip, port)
 
 모듈의 모든 Method는 다음과 같이 객체를 통해 직접 접근 가능하다.
 
-~~~
+~~~ python
 almemory = ALProxy("ALMemory", "nao.local", 9559)
 pings = almemory.ping()
 ~~~
@@ -94,7 +94,7 @@ pings = almemory.ping()
 
 이것을 실행해보시오. 간단하게  ALMotionProxy::setStiffnesses Method를 호출하면 된다.
 
-~~~
+~~~ python
 from naoqi import ALProxy
 motion = ALProxy("ALMotion", "nao.local", 9559)
 motion.setStiffnesses("Body", 1.0)
@@ -107,7 +107,7 @@ API가 'ALValue'를 사용한다는 것을 알 수 있다.
 
 NAO를 걷게 하고 싶다면, 너는 ALMotionProxy::moveInit (로봇이 바른 자세를 설정하기 위해) 그리고 ALMotionProxy::moveTo를 사용해야한다.
 
-~~~
+~~~ python
 from naoqi import ALProxy
 motion = ALProxy("ALMotion", "nao.local", 9559)
 motion.moveInit()
@@ -120,7 +120,7 @@ motion.moveTo(0.5, 0, 0)
 
 이것은 너가 로봇에게 몇 가지 일들을 동시에 시킬 수 있다.
 
-~~~
+~~~ python
 from naoqi import ALProxy
 motion = ALProxy("ALMotion", "nao.local", 9559)
 tts    = ALProxy("ALTextToSpeech", "nao.local", 9559)
@@ -130,7 +130,7 @@ tts.say("I'm walking")
 ~~~
 
 특정 작업이 완료될 때까지 대기할 필요가 있는 경우, Post 사용에서 반환하는 테스크 ID를 사용하여 ALProxy를 대기시킬 수 있다.
-~~~
+~~~ python
 from naoqi import ALProxy
 motion = ALProxy("ALMotion", "nao.local", 9559)
 motion.moveInit()
@@ -149,7 +149,7 @@ motion.wait(id, 0)
 
 reacting_to_events.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     human_greeter = HumanGreeter(app)
     human_greeter.run()
 
-~~~
+~~~ 
 
 참고 : 어떤 식으로든 요청한 변수를 메모리에 저장해야한다. 그렇지 않으면 요청한 변수는 사라지고 연결은 끊어진다. 여기서는 그것을 Class 변수로만 유지한다.
 
@@ -260,7 +260,7 @@ if __name__ == "__main__":
 간단한 예시는 다음과 같다:
 
 data_recording.py
-~~~
+~~~ python
 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
@@ -376,7 +376,7 @@ coffee_en.txt는 “I like coffee”이란 스트링 문자를 포함하고, cof
 
 코드를 살펴보자
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -444,7 +444,7 @@ if __name__ == "__main__":
 
 파이썬은 'ASCII'(로봇의 현재 로컬)을 사용하여 문자열을 디코딩하려고 시도하므로 Print를 실행하면 작동하지 않는다:
 
-~~~
+~~~ python
 Traceback (most recent call last):
   File "non_ascii.py", line 22, in <module>
     main()
@@ -463,14 +463,14 @@ UnicodeEncodeError: 'ascii' codec can't encode character u'\xe9' in position
 
 로봇의 SSH를 열어 다음을 실행한다.
 
-~~~
+~~~ bash
 $ python non_ascii.py
 ~~~
 
 ### 더 나아가기 
 
 파일이 UTF-8로 인코딩됬는지 확인 되지 않으면 다음과 같은 방법으로 확인할 수 있다.
-~~~
+~~~ python
 with codecs.open(filename, encoding="utf-8") as fp:
     try:
         contents = fp.read()
@@ -489,7 +489,7 @@ with codecs.open(filename, encoding="utf-8") as fp:
 NAO를 초기 자세로 만든다. 
 
 almotion_poseInit.py
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -543,7 +543,7 @@ if __name__ == "__main__":
 모든 NAO의 모터를 0으로 만든다.
 
 almotion_poseZero.py
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -614,7 +614,7 @@ if __name__ == "__main__":
 ### 강셩 켜기
 
 almotion_stiffnessOn.py
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -675,7 +675,7 @@ if __name__ == "__main__":
 
 almotion_stiffnessOff.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -738,7 +738,7 @@ NAO를 뒤 앞 그리고 회전하여 걷게 한다.
 
 almotion_move.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -925,7 +925,7 @@ NAO를 목표로 걷게한다.
 
 almotion_moveTo.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1026,7 +1026,7 @@ if __name__ == "__main__":
 #### Trajectory 1
 almotion_cartesianArm1.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1097,8 +1097,8 @@ if __name__ == "__main__":
 
 #### Trajectory 2
 almotion_cartesianArm2.py
-
-~~~
+ 
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1192,7 +1192,7 @@ if __name__ == "__main__":
 NAO의 왼쪽 발을 움직인다.
 almotion_cartesianFoot.py
 
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1282,7 +1282,7 @@ NAO의 몸통을 다른자세로 바꾼다.
 
 #### Trajectory
 
-~~~
+~~~ python
 almotion_cartesianTorso.py
 
 #! /usr/bin/env python
@@ -1383,8 +1383,8 @@ if __name__ == "__main__":
 ### 훌라후프
 almotion_hulaHoop.py
 
-~~~
-
+~~~ python
+ 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1505,7 +1505,7 @@ if __name__ == "__main__":
 
 #### Trajectory 1
 almotion_cartesianTorsoArm1.py
-~~~
+~~~ python
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -1624,7 +1624,7 @@ if __name__ == "__main__":
 
 almotion_cartesianTorsoArm2.py
 
-~~~
+~~~ python
 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
@@ -1752,7 +1752,7 @@ if __name__ == "__main__":
         sys.exit(1)
     main(session)
 
-~~~
+~~~ 
 
 ## Whole body motion 
 
@@ -1762,7 +1762,7 @@ if __name__ == "__main__":
 
 almotion_collisionDetection.py
 
-~~~
+~~~ python
 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
@@ -1938,11 +1938,11 @@ if __name__ == "__main__":
 
 ### Python wrapping
 libalmath는 파이썬으로 Wrapping 되어 있다. 예를 들어 Choregraphe 또는 Python 스크립트에서 이 라이브러리를 사용할 수 있게 한다. Almath를 import 하려면 다음 줄을 실행하십시오.(Choregraphe 외부에서 코딩하려면 Python SDK - Installation Guide를 통해 SDK를 올바르게 설정하십시오)
-~~~
+~~~ python
 import almath
 ~~~
 다음 방법으로 libalmath의 method를 모두 불러올 수 있다.
-~~~
+~~~ python
 almath.methodName(arg0, arg1, ...)
 ~~~
 
@@ -1955,7 +1955,7 @@ libalmath는 까다로운 형태를 사용하기 때문에, 정확하게 사용�
 
 almath_transform.py
 
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2068,7 +2068,7 @@ if __name__ == "__main__":
 
 sensors_getFsrValues.py
 
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2126,7 +2126,7 @@ if __name__ == "__main__":
 ### 관성 센서 값
 
 sensors_getIntertialValues.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2184,7 +2184,7 @@ if __name__ == "__main__":
 ### 초음파
 
 sensors_sonar.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2250,7 +2250,7 @@ if __name__ == "__main__":
 
 audio_soundprocessing.py
 
-~~~
+~~~ py
 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
@@ -2374,7 +2374,7 @@ if __name__ == "__main__":
 ### 이미지 얻기
 로봇의 이미지를 얻어오는 예시다.
 videoInput_getImage.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2437,7 +2437,7 @@ if __name__ == "__main__":
 
 
 vision_getandsaveimage.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2515,9 +2515,9 @@ if __name__ == "__main__":
 
 ### PyQt 사용하여 NAO 이미지 실시간 시각화하기 
 
-vision_showimages.py
+vision_showimages.py 
 
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2658,7 +2658,7 @@ if __name__ == "__main__":
 
 vision_videorecord.py
 
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2724,7 +2724,7 @@ if __name__ == "__main__":
 얼굴을 감지하고 얼굴에 대한 정보를 출력한다.
 
 vision_faceDetection.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2830,7 +2830,7 @@ if __name__ == "__main__":
 얼굴을 감지하고 NAO의 머리가 따라간다.
 
 vision_setfacetracking.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2888,7 +2888,7 @@ ALLandMarkDetection의 예시이다.
 랜드마크를 감지하고, 랜드마크의 정보를 출력한다.
 
 vision_landMarkDetection.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -2996,7 +2996,7 @@ if __name__ == "__main__":
 ALMemory에서 올바른 Event를 요청받음으로써 랜드마크 검출에 반응한다.
 
 vision_onMarkDataChange.py
-~~~
+~~~ py
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
 
@@ -3104,7 +3104,7 @@ if __name__ == "__main__":
 transform을 사용해 랜드마크를 감지하고 로봇 공간안에서 위치를 추적한다.
 
 vision_localization.py
-~~~
+~~~ py
 
 #! /usr/bin/env python
 # -*- encoding: UTF-8 -*-
