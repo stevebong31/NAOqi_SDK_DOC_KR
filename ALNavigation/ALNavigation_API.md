@@ -54,7 +54,7 @@ ALMotionProxy::moveTo와 달리 로봇은 이동하면서 자신의 경로와 �
 #### Parameters:	
 - x – X축으로 떨어져 있는 거리(meter)
 - y – Y축으로 떨어져 있는 거리(meter)
-- Returns:	
+#### Returns:	
 로봇이 마지막 목표에 도달한 경우, 장애물에 의해 정지한 경우 또는 목표에 대해 경로를 찾을 수 없는 경우라면 True를 반환한다. 
 
 ~~~ python
@@ -71,7 +71,8 @@ direct trajectory [“Holonomic”, pathXY, finalTheta, finalTime] 또는 compos
 
     Direct path는: [“Line”, [finalX, finalY]], [“Circle”, [centerX, centerY], spanAngle]로 구성된 선 또는 원(호)일 수 있다.
 
-- Returns: 로봇이 trajectory 완전히 수행했을 경우, 그리고 장애물에 의해 정지했을 경우에 True를 반환한다.
+#### Returns: 
+로봇이 trajectory 완전히 수행했을 경우, 그리고 장애물에 의해 정지했을 경우에 True를 반환한다.
 
 다음 커맨드는 5초안에 1미터 앞으로, 10초 안에 1미터 뒤로 정지 없이 이동한다.
 
@@ -97,7 +98,8 @@ navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 
 - desiredRadius – 우리가 원하는 free space의 반경(meter)
 - displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
 
-- Returns:	cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
+#### Returns:	
+cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
 
 ~~~ python
 desiredRadius = 0.6
