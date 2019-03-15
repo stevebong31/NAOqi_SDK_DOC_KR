@@ -1,5 +1,5 @@
 ## ALNavigation
-
+---
 ### ALNavigation은 무엇을 하는가
 ALNavigation API는 사용자가 로봇을 사용할 때 안전한 이동을 수행할 수 있도록 도와준다.
 
@@ -38,7 +38,7 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 
 
 ## ALNavigation API 
-
+---
 ### Method list
 
 이 모듈은 ALModule API로부터 Method를 상속받는다. 이 모듈은 다음과 같은 구체적인 Method들을 포함한다.
@@ -77,9 +77,9 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 - Navigation/MotionDetected()
 
 
-
+---
 ### Methods
-
+---
 #### bool ALNavigationProxy::navigateTo(const float& x, const float& y)
 
 FRAME_ROBOT에 표시된 상대적인 측량으로 2D 상에서 로봇을 이동하게 만든다. 로봇은 환경과 충돌하지 않도록 안전한 움직임을 취할 것이다. 얘를 들어, 머리로 보고, 멈춘 뒤 경로를 다시 설게한다. 따라서 머리의 리소스를 사용하는 동작은 네비게이션과 같은 타임라인에서 실행할 수 없다.
@@ -99,7 +99,7 @@ ALMotionProxy::moveTo와 달리 로봇은 이동하면서 자신의 경로와 �
 ~~~ python
 navigationProxy.navigateTo(2.0, 0.0)
 ~~~
-
+---
 #### bool ALNavigationProxy::moveAlong(const AL::ALValue& trajectory)
 
 #### Parameters:	
@@ -117,7 +117,7 @@ direct trajectory [“Holonomic”, pathXY, finalTheta, finalTime] 또는 compos
 ~~~ python
 navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 5.0], ["Holonomic", ["Line", [-1.0, 0.0]], 0.0, 10.0]])
 ~~~
-
+---
 #### AL::ALValue ALNavigationProxy::getFreeZone(float desiredRadius, float displacementConstraint)
 
 로봇의 주변 free zone을 출력한다. 로봇이 움직이지 않는다. free space 또는 free zone은 로봇이 이동가능한 공간을 의미한다.
@@ -126,18 +126,17 @@ navigationProxy.moveAlong(["Composed", ["Holonomic", ["Line", [1.0, 0.0]], 0.0, 
 - desiredRadius – 우리가 원하는 free space 반경(meter)
 - displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
 - Returns: ALValue [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]] 
-
+---
 #### qi::Future<AL::ALValue> ALNavigationProxy::findFreeZone(float desiredRadius, float displacementConstraint)
 
 지정한 이동보다 크지 않는, 지정된 반경의 free circular zone를 찾는다. 이를 위해 로봇은 스스로 움직이고 주위를 둘러본다. 
 (blocking call)
 
-- Parameters:	
-desiredRadius – 우리가 원하는 free space의 반경(meter)
-displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
+#### Parameters:	
+- desiredRadius – 우리가 원하는 free space의 반경(meter)
+- displacementConstraint – 발견된 장소에 도달하기 위해 우리가 이동하는 최대 거리(meter)다.
 
-- Returns:	
-cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
+- Returns:	cancelable qi::Future<ALValue> [Free Zone Error Code, result radius (meters), [worldMotionToRobotCenterX (meters), worldMotionToRobotCenterY (meters)]]
 
 ~~~ python
 desiredRadius = 0.6
@@ -145,7 +144,7 @@ displacementConstraint = 0.5
 navigationProxy.findFreeZone(desiredRadius, displacementConstraint)
 ~~~
 #### AL::ALValue ALNavigationProxy::startFreeZoneUpdate() (2.5 verson 이후로 사용 X)
-
+***
 ### Python script을 위한 파이썬 스크립트
 
 다음 코드가 정상적으로 동작한다면 로봇은 free zone의 중심으로 이동한다.
@@ -218,6 +217,67 @@ if __name__ == "__main__":
         print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
                "Please check your script arguments. Run with -h option for help.")
         sys.exit(1)
-    main(session)
-    
+    main(session)    
 ~~~
+
+### Events
+---
+#### Event: "Navigation/AvoidanceNavigator/Status"
+#### callback(std::string eventName, AL::ALValue status, std::string subscriberIdentifier)
+
+local navigator 상태가 변화할 때 발생한다.
+
+#### Parameters:	
+- eventName (std::string) – “Navigation/AvoidanceNavigator/Status”
+- status – 새로운 local navigator의 상태이다. ALNavigation에서 자세한 내용을 참고해라.
+- subscriberIdentifier (std::string) –
+
+***
+#### Event: "Navigation/AvoidanceNavigator/ObstacleDetected"
+#### callback(std::string eventName, AL::ALValue position, std::string subscriberIdentifier)
+
+닫힌 지역에서 장애물이 감지됐을 때 발생한다.
+
+#### Parameters:	
+- eventName (std::string) – “Navigation/AvoidanceNavigator/ObstacleDetected”
+- position – Array 형태의 [x, y], FRAME_ROBOT에서 검출된 장애물의 위치를 나타낸다.
+subscriberIdentifier (std::string) –
+***
+#### Event: "Navigation/AvoidanceNavigator/MovingToFreeZone"
+#### callback(std::string eventName, AL::ALValue status, std::string subscriberIdentifier)
+
+로봇이 근처에 장애물을 두고 움직임을 시작하거나 멈출 때 발생한다.
+
+#### Parameters:	
+- eventName (std::string) – “Navigation/AvoidanceNavigator/MovingToFreeZone”
+- status – 로봇이 움직이기 시작하면 1.0, 멈추면 0.0을 반환한다.
+subscriberIdentifier (std::string) –
+
+---
+
+
+#### Event: "Navigation/AvoidanceNavigator/TrajectoryProgress"
+#### callback(std::string eventName, AL::ALValue progress, std::string subscriberIdentifier)
+trajectory progress가 업데이트 되면 발생한다.
+
+#### Parameters:	
+- eventName (std::string) – “Navigation/AvoidanceNavigator/TrajectoryProgress”
+- progress – trajectory를 달성한 비율에 따라서 0.0에서 1.0 사이로 변화한다.
+- subscriberIdentifier (std::string) –
+---
+
+#### Event: "Navigation/MotionDetected"
+- callback(std::string eventName, AL::ALValue sensorData, std::string subscriberIdentifier)
+
+로봇 금처에 움직이는 무언가가 센서에 감지됬을 때 발생한다.
+
+현재 수행은 오로지 페퍼의 Infra-Red(레이저 센서)에 기반을 둔다.
+
+#### Parameters:	
+- eventName (std::string) – “Navigation/MotionDetected”
+- sensorData – [Sensor, Position, Detected]로 구성된 array, Sensor는 움직임을 감지한 센서의 이름, Position은 FRAME_WORLD에서 탐지된 페퍼의 주변 이동 물체의 3D 위치, Detected는 움직이는 물체가 페퍼와 멀어진다면 False, 가까워 진다면 True이다.(boolean equals)
+- subscriberIdentifier (std::string) –
+
+--- 
+
+### Free Zone Error Code
