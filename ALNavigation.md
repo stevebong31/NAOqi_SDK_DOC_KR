@@ -1,5 +1,5 @@
 ## ALNavigation
----
+
 ### ALNavigation은 무엇을 하는가
 ALNavigation API는 사용자가 로봇을 사용할 때 안전한 이동을 수행할 수 있도록 도와준다.
 
@@ -36,9 +36,10 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 
 페퍼가 한번 탐사를 끝내면, 맵은 2D 이미지로 변환된다.
 
+---
 
 ## ALNavigation API 
----
+
 ### Method list
 
 이 모듈은 ALModule API로부터 Method를 상속받는다. 이 모듈은 다음과 같은 구체적인 Method들을 포함한다.
@@ -79,7 +80,7 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 
 ---
 ### Methods
----
+
 #### bool ALNavigationProxy::navigateTo(const float& x, const float& y)
 
 FRAME_ROBOT에 표시된 상대적인 측량으로 2D 상에서 로봇을 이동하게 만든다. 로봇은 환경과 충돌하지 않도록 안전한 움직임을 취할 것이다. 얘를 들어, 머리로 보고, 멈춘 뒤 경로를 다시 설게한다. 따라서 머리의 리소스를 사용하는 동작은 네비게이션과 같은 타임라인에서 실행할 수 없다.
@@ -281,3 +282,7 @@ trajectory progress가 업데이트 되면 발생한다.
 --- 
 
 ### Free Zone Error Code
+
+0. 좋다. 너는 결과의 좌표와 반경을 믿을 수 있다. 
+1. 좋지 않다. 문제가 있었다. 반환된 좌표와 반경을 믿지 마라.
+2. 일부 좋지 않다. 문제는 없었지만, 제약 조건은 만족하지 않았지만 최선의 해결책으로 선택했다. 
