@@ -32,5 +32,17 @@ class ALNavigationProxy
 ---
 #### void ALNavigationProxy::stopExploration()
 진행중인 탐색이나 위치 추정을 중지한다. 
+---
 
 #### std::string ALNavigationProxy::saveExploration()¶
+현재 탐색 데이터를 디스크에 저장하여 나중에 사용할 수 있게 한다.
+
+- Return : 생성된 .explo 파일의 경로의 문자열
+
+---
+#### ALValue ALNavigationProxy::getMetricalMap()
+현재 불러온 탐색을 바탕으로 지도를 반환한다 : [mpp, width, height, [originOffsetX, originOffsetY], [pxlVal, ...]]
+
+- mpp는 화소 당 미터 단위의 지도 해상도,
+- width와 height는 이미지 픽셀의 사이즈,
+- 
