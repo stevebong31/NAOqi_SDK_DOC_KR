@@ -208,3 +208,68 @@ if __name__ == "__main__":
     main(session)
 
 ~~~
+
+#### 위치 추정 파이썬 스크립트
+다음 파이썬 스크립트는 인자로 주어진 지도를 읽어오고, 지도 안에서 페퍼의 위치를 다시 지정하며, 지도의 위치로 이동한다. 
+
+localize.py
+
+~~~py 
+
+#! /usr/bin/env python
+# -*- encoding: UTF-8 -*-
+
+"""예제 : 위치 추정 method 사용하기 """
+
+import qi
+import argparse
+import sys
+
+
+def main(session, exploration_file):
+    """
+    이것을 위치 추정 method를 사용하는 예제이다.
+    """
+    # ALNavigation, ALMotion를 프록시로 할당한다.
+    navigation_service = session.service("ALNavigation")
+    motion_service = session.service("ALMotion")
+
+    # 로봇 깨우기 구동.
+    motion_service.wakeUp()
+
+    # 저장된 이전 탐색 파일을 불러온다.
+    navigation_service.loadExploration(exploration_file)
+
+    # 로봇의 위치를 다시 추정한다.
+    guess = [0., 0.] # 로봇이 저장된 탐색 파일이 시작한 곳에서 멀지 않다고 가정한다.
+    navigation_service.relocalizeInMap(guess)
+    navigation_service.startLocalization()
+
+    # 지도의 다른 위치로 이동
+    navigation_service.navigateToInMap([2., 0., 0.])
+
+    # 로봇의 도착을 확인.
+    print "I reached: " + str(navigation_service.getRobotPositionInMap()[0])
+
+    # 위치 추정 정지.
+    navigation_service.stopLocalization()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="Robot IP address. On robot or Local Naoqi: use '127.0.0.1'.")
+    parser.add_argument("--port", type=int, default=9559,
+                        help="Naoqi port number")
+    parser.add_argument("--explo", type=str, help="Path to .explo file.")
+
+    args = parser.parse_args()
+    session = qi.Session()
+    try:
+        session.connect("tcp://" + args.ip + ":" + str(args.port))
+    except RuntimeError:
+        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
+               "Please check your script arguments. Run with -h option for help.")
+        sys.exit(1)
+    main(session, args.explo)
+
+~~~
