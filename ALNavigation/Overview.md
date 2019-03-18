@@ -35,3 +35,4 @@ Safety map은 motion safy, local navigation, 그리고 free zone API를 사용�
 탐사 중, 페퍼는 자신의 Odometry와 레이저 센서로 SLAM을 수행한다.
 
 페퍼가 한번 탐사를 끝내면, 맵은 2D 이미지로 변환된다.
+ 
