@@ -45,4 +45,31 @@ class ALNavigationProxy
 
 - mpp는 화소 당 미터 단위의 지도 해상도,
 - width와 height는 이미지 픽셀의 사이즈,
-- 
+- originOffset은 지도 픽셀 (0,0)의 계측적 오프셋이다.
+- 그리고 [pxlVal, ...]은 0(사용한 공간/갈 수 없는)에서 100(자유 공간/갈 수 있는)사이의 픽셀 부동 소수점 값의 버퍼이다. 
+  
+---
+
+#### qi::Future<int> ALNavigationProxy::navigateToInMap(const std::vector<float>& target)
+탐색한 지도를 바탕으로 페퍼가 원하는 목표로 이동하도록 한다.
+
+예외 : 탐색을 로드하지 못했거나 위치 추정을 실행하지 못했을 경우.
+
+참고 : 현재, 페퍼는 최종 목표로 theta를 사용하지 않는다. 최종 방향의 각도를 조절하기 위해서 ALMotion.moveTo를 사용할 수 있다.
+
+- Parameters:	
+target – [x, y, theta] 탐색한 맵 프레임에서의 목표.
+- Returns:	
+에러 코드.
+---
+
+#### ALValue ALNavigationProxy::getRobotPositionInMap()
+
+현재 탐색한 지도 프레임에서 로봇의 위치를 추정한다.
+
+예외 : 탐색을 로드하지 못했거나 위치 추정을 실행하지 못했을 경우.
+
+Returns : 추정된 위치 Pose의 ALValue
+
+---
+qi::Future<bool> ALNavigationProxy::loadExploration(std::string path)
