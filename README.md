@@ -10,7 +10,9 @@
 
 Tutorial.md 문서 코드의 주석은 API 분석 후 추가될 예정입니다. (2018-03)
 
-ALNavigation/ALNavigation_API.md 문서 정리되었습니다. (2018-03-15)
+ALNavigation/ALNavigation_API.md 문서가 정리되었습니다. (2018-03-15)
+
+ALNavigation/Exploration_API.md 문서가 정리되었습니다. (2018-03-18)
 
 
 
