@@ -32,6 +32,7 @@ class ALNavigationProxy
 ---
 #### void ALNavigationProxy::stopExploration()
 진행중인 탐색이나 위치 추정을 중지한다. 
+
 ---
 
 #### std::string ALNavigationProxy::saveExploration()¶
@@ -69,7 +70,50 @@ target – [x, y, theta] 탐색한 맵 프레임에서의 목표.
 
 예외 : 탐색을 로드하지 못했거나 위치 추정을 실행하지 못했을 경우.
 
-Returns : 추정된 위치 Pose의 ALValue
+- Returns : 추정된 위치 Pose의 ALValue
 
 ---
-qi::Future<bool> ALNavigationProxy::loadExploration(std::string path)
+#### qi::Future<bool> ALNavigationProxy::loadExploration(std::string path)
+디스크에 위치한 .explo를 불러온다. 
+
+- Returns: 탐색 파일 로드를 성공 했을 때 반환.
+
+---
+
+#### qi::Future<ALValue> ALNavigationProxy::relocalizeInMap(const std::vector<float>& estimation)
+
+localizer에게 추정된 포즈 주위로 다시 추정 할 것을 요청한다.
+
+예외 : 탐색을 불러오지 못했을 경우.
+
+- Parameters:	
+estimation – [x, y, theta] 지도 프레임에서 로봇의 추정된 포즈
+- Returns:	
+a Future holding the resulting localized pose formatted as follow.
+
+
+---
+#### void ALNavigationProxy::startLocalization()
+
+로봇의 위치 추정을 계산하는 탐색 루프를 시작한다. 
+
+예외 : 탐색 파일을 로드하지 못했을 경우.
+
+---
+#### void ALNavigationProxy::stopLocalization()
+
+로봇이 위치 추정을 계산하는 탐색 루프를 정지한다.
+
+위치 추정 루프가 실행중이 아니라면 동작하지 않는다. 
+
+
+### Custom types
+
+#### Localized Pose
+
+위치 추정 포즈는 다음과 같이 정의된다 :
+
+[Pose, Uncertainty]
+
+- 포즈는 localizer가 계산한 [X, Y, theta].
+- Uncertainty는 위치 추정 포즈의 불확실성 정의하는 [radiusX, radiusY, orientation] 파라미터를 가진 타원이다.
