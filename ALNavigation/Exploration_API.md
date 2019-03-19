@@ -137,6 +137,7 @@ a Future holding the resulting localized pose formatted as follow.
 
 다음 스크립트는 로봇이 반경 2m의 지역을 탐색하게 하고, 정상적으로 동작했다면 탐색 파일을 디스크에 저장하고 출발점으로 돌아와 결과 지도를 표시한다.
 
+![ex_screenshot1](./1.PNG)
 
 explore.py    / 첫 탐색을 위한 스크립트
 
@@ -212,7 +213,7 @@ if __name__ == "__main__":
 ![ex_screenshot1](./Figure_1.png)
 #### 위치 추정 파이썬 스크립트
 다음 파이썬 스크립트는 인자로 주어진 지도를 읽어오고, 지도 안에서 페퍼의 위치를 다시 지정하며, 지도의 위치로 이동한다. 
-
+![ex_screenshot1](./2.PNG)
 localize.py   / 탐색한 지도를 바탕으로 다시 위치추정을 하는 스크립트
 
 ~~~py 
