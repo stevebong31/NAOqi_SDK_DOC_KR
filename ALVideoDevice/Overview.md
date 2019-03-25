@@ -54,3 +54,33 @@ local |	Gb Ethernet	 |100Mb Ethernet |	WiFi g
 ---
 
 ### 시작하기
+
+1. ALVideoDeviceProxy::subscribeCamera에 요청해, 해상도, 색상공간 밑 프레임 등의 매개 변수를 전달하여 비전 모듈을 ALVideoDevice 프록시에 연걸하십시오.
+2. 메인 루프에서 ALVideoDeviceProxy::getImageLocal 또는 ALVideoDeviceProxy::getImageRemote를 요청받아 이미지를 받아오십시오.
+3. ALVideoDeviceProxy::releaseImage를 사용해 이미지 호출을 해제하십시오.
+4. 모듈을 중지하려면 기본 루프에서 빠져나와 ALVideoDeviceProxy::unsubscribe를 요청하십시오.
+---
+
+### 추가 라이브러리 
+
+#### OpenCV
+
+C++에서 자신만의 비전 모듈을 개발하려면 OpenCV에 관심 있을 수 있다. 그것은 Vision 처리에 있어서 강력한 라이브러리이다. 우리는 현재 OpenCV 2.4를 사용하고 있다.
+
+OpenCV에 대한 자세한 내용은 http://opencv.willowgarage.com/wiki/을 참조하십시오.
+
+튜토리얼: http://doc.aldebaran.com/2-5/dev/cpp/examples/vision/opencv.html#cpp-tutos-opencv
+
+#### ~~pYUV~~
+
+
+### 시각 / 움직임 변환
+
+변환 method는 좌표를 각도로 변환하는데 사용할 수 있고 반대의 경우도 유용할 수 있다. 예를 들어 감지 프로세스가 개체의 위치를 픽셀로 표시하면 이 위치를 각도로 변환하여 ALMotionProxy::setAngeles를 사용하여 로봇이 탐지된 개체 방향을 바라보게 할 수 있다. 
+
+---
+### 시뮬레이션 관리 
+
+#### 로봇에서 비디오 재생하기. 
+
+로봇에서 비디오를 재생하려면 비디오 장치를 시뮬레이터 모드로 구성하고 ALVideoDeviceProxy::putImage를 사용하십시오.
