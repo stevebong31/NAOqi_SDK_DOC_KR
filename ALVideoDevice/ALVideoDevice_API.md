@@ -125,7 +125,7 @@ Conversion
 ---
 
 ### Module Subscription
-
+---
 std::string ALVideoDeviceProxy::subscribeCamera(const std::string& Name, const int& CameraIndex, const int& Resolution, const int& ColorSpace, const int& Fps)
 
 ALVideoDevice를 요청하십시오. 비디오 모듈이 ALVideoDevice에 등록되면, 요청된 이미지 형식의 버퍼가 버퍼 목록에 추가된다.
@@ -236,25 +236,108 @@ import qi
 from naoqi import ALProxy
 import sys
 import time
-import vision_definitions
-
 
 video_service = ALProxy("ALVideoDevice" ,nao_ip, 9559)
 
-
-# Register a Generic Video Module
-resolution = vision_definitions.kQQVGA
-colorSpace = vision_definitions.kYUVColorSpace
+resolution = 2  # Image of 640*480px
+colorSpace = 0  # AL::kYuvColorSpace
 fps = 20
 
 nameId = video_service.subscribe("python_GVM", resolution, colorSpace, fps)
+img = video_service.getImageRemote(nameId)
 
-print 'getting images in remote'
-for i in range(0, 20):
-    print "getting image " + str(i)
-    sub_nameId = video_service.getImageRemote(nameId)
-    time.sleep(0.05)
-
-video_service.unsubscribe(sub_nameId)
+video_service.unsubscribe(nameId)
 
 ~~~
+
+---
+
+AL::ALValue ALVideoDeviceProxy::getSubscribers()
+
+요청한 모든 subscriber의 이름 목록을 가져온다.
+
+#### Returns:	
+subscriber 이름이 포함된 문자열 배열.
+
+---
+### Camera Management
+---
+AL::ALValue ALVideoDeviceProxy::getCameraIndexes()
+
+사용 가능한 카메라 인덱스 목록을 가져온다.
+
+#### Returns:	
+카메라 인덱스 배열.
+
+---
+
+bool ALVideoDeviceProxy::hasDepthCamera()
+
+ALVideoDevice에 depth camera가 감지외었는지 물어본다. 만약 감지되었다면, kDepthCamera로 접근할 수 있다.
+
+#### Returns:	
+Depth camera가 감지 되었다면 true, 없다면 false이다.
+
+---
+
+int ALVideoDeviceProxy::getCameraModel(const int& CameraIndex)
+
+지정된 카메라의 모듈을 가져온다.
+
+#### Parameters:	
+- CameraIndex –
+Video system의 카메라 인덱스.
+
+#### Returns:	
+- 카메라 모델.
+
+---
+
+std::string ALVideoDeviceProxy::getCameraName(const int& CameraIndex)¶
+
+지정된 카메라의 이름을 가져온다. 
+
+#### Parameters:	
+-CameraIndex – 
+Video system의 카메라 인덱스.
+#### Returns:	
+카메라의 이름.
+
+---
+
+~~int ALVideoDeviceProxy::getActiveCamera()~~
+
+~~bool ALVideoDeviceProxy::setActiveCamera(const int& ActiveCamera)~~
+
+~~int ALVideoDeviceProxy::getFrameRate(const int& CameraIndex)~~
+
+~~int ALVideoDeviceProxy::getResolution(const int& CameraIndex)~~
+
+~~int ALVideoDeviceProxy::getColorSpace(const int& CameraIndex)~~
+
+~~float ALVideoDeviceProxy::getHorizontalFOV(const int& CameraIndex)~~
+
+~~float ALVideoDeviceProxy::getVerticalFOV(const int& CameraIndex)~~
+
+~~int ALVideoDeviceProxy::getParameter(const int& CameraIndex, const int& parameter)~~
+
+~~AL::ALValue ALVideoDeviceProxy::getParameterRange(const int& CameraIndex, const int& Id)~~
+
+~~bool ALVideoDeviceProxy::setParameter(const int& CameraIndex, const int& parameter, const int& newValue)~~
+
+~~bool ALVideoDeviceProxy::setParameterToDefault(const int& CameraIndex, const int& parameter)~~
+
+~~bool ALVideoDeviceProxy::setAllParametersToDefault(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::openCamera(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::closeCamera(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::isCameraOpen(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::startCamera(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::stopCamera(const int& CameraIndex)~~
+
+~~bool ALVideoDeviceProxy::isCameraStarted(const int& CameraIndex)~~
+
