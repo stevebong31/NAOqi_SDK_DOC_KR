@@ -341,3 +341,14 @@ Video system의 카메라 인덱스.
 
 ~~bool ALVideoDeviceProxy::isCameraStarted(const int& CameraIndex)~~
 
+
+---
+
+AL::ALValue ALVideoDeviceProxy::getImageRemote(const std::string& Handle)
+
+비디오 장치에서 최신의 이미지를 검색하고, 비전 모듈이 요청한 형식을 제공하기 위해 이미지에 변환을 적용한 뒤 네트워크를 통해 ALValue로 전송한다.
+
+#### Parameters:	
+- Handle – Handle to identify the subscriber.
+#### Returns:	
+Container of image.
